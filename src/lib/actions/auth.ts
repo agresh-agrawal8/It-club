@@ -36,7 +36,7 @@ export async function loginAction(
   const raw = parsed.data.memberId.trim();
   const email = raw.includes("@") ? raw.toLowerCase() : memberIdToEmail(raw);
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password: parsed.data.password,
   });
@@ -45,7 +45,22 @@ export async function loginAction(
     return { error: "Invalid Member ID / email or password." };
   }
 
-  const redirectTo = (formData.get("redirect") as string) || "/dashboard";
+  // Land each role in its own home: core team → Core Team Panel,
+  // members → member dashboard. An explicit ?redirect wins.
+  let home = "/dashboard";
+  if (data.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+    if (profile?.role === "admin" || profile?.role === "super_admin") {
+      home = "/admin";
+    }
+  }
+
+  const explicit = (formData.get("redirect") as string) || "";
+  const redirectTo = explicit && explicit !== "/dashboard" ? explicit : home;
   revalidatePath("/", "layout");
   redirect(redirectTo);
 }

@@ -9,7 +9,7 @@ export function isAdminRole(role: UserRole | string | null | undefined) {
 
 /** Human label for a role. */
 export function roleLabel(role: UserRole | string | null | undefined) {
-  if (role === "super_admin") return "Super Admin";
+  if (role === "super_admin") return "Master Admin";
   if (role === "admin") return "Core Team";
   return "Member";
 }

@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Plus,
 } from "lucide-react";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import {
   getMyProjects,
@@ -22,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressBar } from "@/components/ui/progress";
-import { formatDate, timeAgo } from "@/lib/utils";
+import { formatDate, timeAgo, isAdminRole } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -30,6 +31,9 @@ const priorityVariant = { urgent: "danger", high: "warning", medium: "accent", l
 
 export default async function DashboardPage() {
   const { user, profile } = await requireUser();
+
+  // Core team lands on the Core Team Panel; this dashboard is the member home.
+  if (isAdminRole(profile?.role)) redirect("/admin");
   const [projects, tasks, notifications, events, achievements] = await Promise.all([
     getMyProjects(user.id),
     getMyTasks(user.id),

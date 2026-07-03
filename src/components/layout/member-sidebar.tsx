@@ -13,6 +13,10 @@ import {
   Users,
   LogOut,
   Shield,
+  Trophy,
+  Award,
+  ImageIcon,
+  Mail,
 } from "lucide-react";
 import { cn, initials, isAdminRole, roleLabel } from "@/lib/utils";
 import { Logo } from "./logo";
@@ -24,6 +28,17 @@ const NAV = [
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/profile", label: "My Profile", icon: User },
+];
+
+/** Core Team Panel navigation — shown only to admins. */
+const ADMIN_NAV = [
+  { href: "/admin", label: "Overview", icon: Shield },
+  { href: "/admin/members", label: "Members", icon: Users },
+  { href: "/admin/events", label: "Events", icon: CalendarDays },
+  { href: "/admin/competitions", label: "Competitions", icon: Trophy },
+  { href: "/admin/achievements", label: "Achievements", icon: Award },
+  { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
+  { href: "/admin/messages", label: "Messages", icon: Mail },
 ];
 
 export function MemberSidebar({
@@ -59,44 +74,61 @@ export function MemberSidebar({
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                active
-                  ? "bg-brand-500/15 text-white"
-                  : "text-zinc-400 hover:bg-white/5 hover:text-white",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-              {href === "/notifications" && unread > 0 && (
-                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-[10px] font-semibold text-white">
-                  {unread}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
         {isAdminRole(role) && (
-          <Link
-            href="/admin"
-            className={cn(
-              "mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-              pathname.startsWith("/admin")
-                ? "bg-amber-500/15 text-amber-200"
-                : "text-amber-300/80 hover:bg-amber-500/10 hover:text-amber-200",
-            )}
-          >
-            <Shield className="h-4 w-4" />
-            Admin Console
-          </Link>
+          <>
+            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[2px] text-amber-300/70">
+              Core Team Panel
+            </p>
+            {ADMIN_NAV.map(({ href, label, icon: Icon }) => {
+              const active =
+                href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                    active
+                      ? "bg-amber-500/15 text-amber-200"
+                      : "text-zinc-400 hover:bg-amber-500/10 hover:text-amber-200",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Link>
+              );
+            })}
+            <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-[2px] text-zinc-600">
+              Personal
+            </p>
+          </>
+        )}
+
+        {NAV.filter(({ href }) => !(isAdminRole(role) && href === "/dashboard")).map(
+          ({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(href + "/");
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                  active
+                    ? "bg-brand-500/15 text-white"
+                    : "text-zinc-400 hover:bg-white/5 hover:text-white",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+                {href === "/notifications" && unread > 0 && (
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-[10px] font-semibold text-white">
+                    {unread}
+                  </span>
+                )}
+              </Link>
+            );
+          },
         )}
       </nav>
 
@@ -133,8 +165,10 @@ export function MemberSidebar({
  */
 export function MemberMobileNav({ role, unread }: { role: string; unread: number }) {
   const pathname = usePathname();
+  // Admins see the Core Team Panel first, then personal pages (no dashboard —
+  // it redirects them to /admin anyway).
   const links = isAdminRole(role)
-    ? [...NAV, { href: "/admin", label: "Admin", icon: Shield }]
+    ? [...ADMIN_NAV, ...NAV.filter((l) => l.href !== "/dashboard")]
     : NAV;
 
   return (
@@ -153,7 +187,8 @@ export function MemberMobileNav({ role, unread }: { role: string; unread: number
       </div>
       <nav className="flex gap-1 overflow-x-auto px-3 pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {links.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
+          const active =
+            href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}

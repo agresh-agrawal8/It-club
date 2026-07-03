@@ -31,6 +31,13 @@ export async function createMemberAction(formData: FormData) {
     return { error: "Please fill all fields correctly (password ≥ 6 chars)." };
   }
 
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return {
+      error:
+        "Account creation needs the SUPABASE_SERVICE_ROLE_KEY env var (Supabase → Settings → API keys → secret key). Add it on Vercel and locally, then try again.",
+    };
+  }
+
   const admin = createAdminClient();
   const { fullName, memberId, password, role } = parsed.data;
 
