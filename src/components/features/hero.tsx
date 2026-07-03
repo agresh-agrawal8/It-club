@@ -46,7 +46,7 @@ export function Hero({
         <div className="hero-scrim absolute inset-0" />
 
         {/* Content */}
-        <div className="relative flex min-h-[560px] flex-col justify-end px-6 pb-40 pt-24 sm:px-10 md:min-h-[680px] md:pb-44 md:pt-32 lg:px-16">
+        <div className="relative flex min-h-[620px] flex-col justify-end px-6 pb-56 pt-24 sm:px-10 sm:pb-44 md:min-h-[700px] md:pb-44 md:pt-32 lg:px-16">
           <div className="max-w-3xl">
             <p className="eyebrow text-brand-300">{eyebrow}</p>
             <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.02] tracking-tighter text-white sm:text-5xl lg:text-6xl xl:text-[4.75rem]">
