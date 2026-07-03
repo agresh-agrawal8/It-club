@@ -1,0 +1,9 @@
+{
+  "pkg": "agresh-design-system",
+  "globalName": "AgreshDS",
+  "projectId": "46733530-41c3-4396-8a48-ae68b3613b74",
+  "shape": "package",
+  "buildCmd": "npm run build",
+  "cssEntry": "dist/agresh-design-system.css",
+  "readmeHeader": ".design-sync/conventions.md"
+}
