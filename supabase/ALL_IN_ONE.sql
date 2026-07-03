@@ -12,7 +12,7 @@ create extension if not exists "pg_trgm";
 
 -- ── Enums ───────────────────────────────────────────────────
 do $$ begin
-  create type user_role as enum ('visitor', 'member', 'admin');
+  create type user_role as enum ('visitor', 'member', 'admin', 'super_admin');
 exception when duplicate_object then null; end $$;
 do $$ begin
   create type project_status as enum ('draft', 'in_progress', 'completed', 'archived');
@@ -263,7 +263,7 @@ as $$ select role from public.profiles where id = auth.uid(); $$;
 
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path = public
-as $$ select coalesce((select role = 'admin' from public.profiles where id = auth.uid()), false); $$;
+as $$ select coalesce((select role in ('admin', 'super_admin') from public.profiles where id = auth.uid()), false); $$;
 
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
@@ -574,5 +574,36 @@ begin
 end $$;
 
 update public.profiles
-set role = 'admin', member_id = 'SOCH-0001', full_name = 'Agresh Agrawal', headline = 'Core Team'
+set role = 'super_admin', member_id = 'SOCH-0001', full_name = 'Agresh Agrawal', headline = 'Core Team'
 where id = (select id from auth.users where email = 'agresh@agreshagrawal.com');
+
+-- ── Second super admin: vrindaagr26@gmail.com ────────────────
+do $$
+declare uid uuid := gen_random_uuid();
+begin
+  if not exists (select 1 from auth.users where email = 'vrindaagr26@gmail.com') then
+    insert into auth.users (
+      instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+      raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+      confirmation_token, recovery_token, email_change, email_change_token_new
+    ) values (
+      '00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated',
+      'vrindaagr26@gmail.com', crypt('CHANGE-ME-STRONG-PASSWORD', gen_salt('bf')), now(),
+      '{"provider":"email","providers":["email"]}'::jsonb,
+      '{"full_name":"Vrinda Agrawal","member_id":"SOCH-0002","role":"admin"}'::jsonb,
+      now(), now(), '', '', '', ''
+    );
+    insert into auth.identities (
+      id, user_id, provider_id, identity_data, provider,
+      last_sign_in_at, created_at, updated_at
+    ) values (
+      gen_random_uuid(), uid, uid::text,
+      jsonb_build_object('sub', uid::text, 'email', 'vrindaagr26@gmail.com', 'email_verified', true, 'phone_verified', false),
+      'email', now(), now(), now()
+    );
+  end if;
+end $$;
+
+update public.profiles
+set role = 'super_admin', member_id = 'SOCH-0002', full_name = 'Vrinda Agrawal', headline = 'Core Team'
+where id = (select id from auth.users where email = 'vrindaagr26@gmail.com');

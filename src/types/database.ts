@@ -4,7 +4,7 @@
  * fully typed before the CLI is wired up.
  */
 
-export type UserRole = "visitor" | "member" | "admin";
+export type UserRole = "visitor" | "member" | "admin" | "super_admin";
 export type ProjectStatus = "draft" | "in_progress" | "completed" | "archived";
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done";

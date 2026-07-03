@@ -18,6 +18,7 @@ import {
   getHomepageContent,
   getTeam,
 } from "@/lib/data";
+import { roleLabel } from "@/lib/utils";
 
 const FOCUS_AREAS = [
   { n: "01", label: "Web Development", note: "React, Next.js, full-stack apps" },
@@ -167,7 +168,7 @@ export default async function HomePage() {
                       {m.full_name || "Member"}
                     </div>
                     <div className="mt-0.5 text-xs text-zinc-500">
-                      {m.headline ?? (m.role === "admin" ? "Core team" : "Member")}
+                      {m.headline ?? roleLabel(m.role)}
                     </div>
                   </div>
                 </Link>

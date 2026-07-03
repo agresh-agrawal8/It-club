@@ -14,7 +14,7 @@ import {
   LogOut,
   Shield,
 } from "lucide-react";
-import { cn, initials } from "@/lib/utils";
+import { cn, initials, isAdminRole, roleLabel } from "@/lib/utils";
 import { Logo } from "./logo";
 
 const NAV = [
@@ -53,7 +53,9 @@ export function MemberSidebar({
         </span>
         <div className="min-w-0">
           <div className="truncate text-sm font-medium text-white">{name}</div>
-          <div className="truncate text-xs text-zinc-500">{memberId ?? role}</div>
+          <div className="truncate text-xs text-zinc-500">
+            {memberId ? `${memberId} · ${roleLabel(role)}` : roleLabel(role)}
+          </div>
         </div>
       </div>
 
@@ -82,7 +84,7 @@ export function MemberSidebar({
           );
         })}
 
-        {role === "admin" && (
+        {isAdminRole(role) && (
           <Link
             href="/admin"
             className={cn(

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ProfileForm } from "./profile-form";
+import { isAdminRole, roleLabel } from "@/lib/utils";
 import type { Profile } from "@/types/database";
 
 export const metadata: Metadata = { title: "My Profile" };
@@ -25,7 +26,7 @@ export default async function ProfilePage() {
           <div>
             <div className="flex items-center justify-center gap-2">
               <h2 className="text-lg font-semibold text-white">{p.full_name || "Member"}</h2>
-              {p.role === "admin" && <Badge variant="accent">Core</Badge>}
+              {isAdminRole(p.role) && <Badge variant="accent">{roleLabel(p.role)}</Badge>}
             </div>
             {p.member_id && <p className="text-xs text-zinc-500">{p.member_id}</p>}
           </div>

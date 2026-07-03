@@ -1,5 +1,18 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { UserRole } from "@/types/database";
+
+/** True for roles with full admin access (core team). */
+export function isAdminRole(role: UserRole | string | null | undefined) {
+  return role === "admin" || role === "super_admin";
+}
+
+/** Human label for a role. */
+export function roleLabel(role: UserRole | string | null | undefined) {
+  if (role === "super_admin") return "Super Admin";
+  if (role === "admin") return "Core Team";
+  return "Member";
+}
 
 /** Tailwind-aware className combiner (from the Agresh design system). */
 export function cn(...inputs: ClassValue[]) {

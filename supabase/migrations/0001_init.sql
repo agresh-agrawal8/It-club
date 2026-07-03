@@ -10,7 +10,7 @@ create extension if not exists "pg_trgm"; -- fuzzy / global search
 -- ─────────────────────────────────────────────────────────────
 -- Enums
 -- ─────────────────────────────────────────────────────────────
-create type user_role        as enum ('visitor', 'member', 'admin');
+create type user_role        as enum ('visitor', 'member', 'admin', 'super_admin');
 create type project_status    as enum ('draft', 'in_progress', 'completed', 'archived');
 create type task_priority     as enum ('low', 'medium', 'high', 'urgent');
 create type task_status       as enum ('todo', 'in_progress', 'blocked', 'done');
@@ -298,7 +298,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce((select role = 'admin' from public.profiles where id = auth.uid()), false);
+  select coalesce((select role in ('admin', 'super_admin') from public.profiles where id = auth.uid()), false);
 $$;
 
 -- keep updated_at fresh

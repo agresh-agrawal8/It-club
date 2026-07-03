@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MemberCard } from "@/components/features/member-card";
 import { getTeam } from "@/lib/data";
+import { isAdminRole } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Team",
@@ -13,8 +14,8 @@ export const metadata: Metadata = {
 
 export default async function TeamPage() {
   const team = await getTeam();
-  const core = team.filter((m) => m.role === "admin");
-  const members = team.filter((m) => m.role !== "admin");
+  const core = team.filter((m) => isAdminRole(m.role));
+  const members = team.filter((m) => !isAdminRole(m.role));
 
   return (
     <>

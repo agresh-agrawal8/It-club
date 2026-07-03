@@ -1,5 +1,6 @@
 import { Github, Linkedin, Globe } from "lucide-react";
 import type { Profile } from "@/types/database";
+import { isAdminRole } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,7 @@ export function MemberCard({ member }: { member: Profile }) {
           <h3 className="text-lg font-semibold tracking-tight text-white">
             {member.full_name || "Member"}
           </h3>
-          {member.role === "admin" && <Badge variant="accent">Core</Badge>}
+          {isAdminRole(member.role) && <Badge variant="accent">Core</Badge>}
         </div>
         {member.headline && <p className="mt-1 text-sm text-zinc-400">{member.headline}</p>}
         {member.grade && <p className="mt-0.5 text-xs text-zinc-500">{member.grade}</p>}

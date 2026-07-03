@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { CreateMemberForm } from "./create-member-form";
-import { formatDate } from "@/lib/utils";
+import { formatDate, isAdminRole, roleLabel } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Manage Members" };
 
@@ -62,7 +62,7 @@ export default async function AdminMembersPage() {
                   </td>
                   <td className="px-5 py-3 text-zinc-400">{m.member_id ?? "—"}</td>
                   <td className="px-5 py-3">
-                    <Badge variant={m.role === "admin" ? "accent" : "small"}>{m.role}</Badge>
+                    <Badge variant={isAdminRole(m.role) ? "accent" : "small"}>{roleLabel(m.role)}</Badge>
                   </td>
                   <td className="px-5 py-3 text-zinc-400">{formatDate(m.created_at)}</td>
                   <td className="px-5 py-3">

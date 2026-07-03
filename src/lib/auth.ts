@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/utils";
 import type { Profile } from "@/types/database";
 
 /**
@@ -38,6 +39,6 @@ export async function requireUser() {
 /** Require an admin; redirect non-admins to their dashboard. */
 export async function requireAdmin() {
   const current = await requireUser();
-  if (current.profile?.role !== "admin") redirect("/dashboard");
+  if (!isAdminRole(current.profile?.role)) redirect("/dashboard");
   return current;
 }
