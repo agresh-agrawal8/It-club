@@ -160,7 +160,7 @@ export default async function HomePage() {
                 <Link
                   key={m.id}
                   href="/team"
-                  className="group flex flex-col gap-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-6 transition-colors hover:border-white/20 hover:bg-zinc-900"
+                  className="glass glass-hover group flex flex-col gap-4 rounded-2xl p-6"
                 >
                   <Avatar name={m.full_name || "Member"} src={m.avatar_url} size="lg" />
                   <div>
@@ -205,7 +205,7 @@ export default async function HomePage() {
       {/* ── Closing CTA ── */}
       <section className="py-24 md:py-32">
         <Container>
-          <div className="grain relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-zinc-900 to-zinc-950 px-8 py-20 md:px-16 md:py-28">
+          <div className="glass-deep grain relative overflow-hidden rounded-[28px] px-8 py-20 md:px-16 md:py-28">
             <div className="glow-violet pointer-events-none absolute inset-x-0 top-0 h-2/3 opacity-60" />
             <div className="relative flex max-w-2xl flex-col gap-6">
               <p className="eyebrow text-brand-300">Get in touch</p>

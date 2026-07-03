@@ -46,7 +46,7 @@ export function GlobalSearch() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-zinc-900 px-5 py-4 focus-within:border-brand-400">
+      <div className="glass flex items-center gap-3 rounded-2xl px-5 py-4 transition-colors focus-within:border-brand-400/60">
         <Search className="h-5 w-5 text-zinc-500" />
         <input
           autoFocus
@@ -66,7 +66,7 @@ export function GlobalSearch() {
               <Link
                 key={`${r.type}-${i}`}
                 href={r.href}
-                className="flex items-center gap-4 rounded-2xl border border-white/10 bg-zinc-900 p-4 transition-colors hover:border-brand-400/40 hover:bg-zinc-800/60"
+                className="glass flex items-center gap-4 rounded-2xl p-4 transition-colors hover:border-brand-400/40"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500/15 text-brand-300">
                   <Icon className="h-4 w-4" />

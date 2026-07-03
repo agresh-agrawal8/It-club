@@ -30,7 +30,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <Card glass>
+          <Card deep>
             <Suspense fallback={<div className="h-64" />}>
               <LoginForm />
             </Suspense>

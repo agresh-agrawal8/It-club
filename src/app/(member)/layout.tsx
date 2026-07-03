@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { MemberSidebar } from "@/components/layout/member-sidebar";
+import { MemberSidebar, MemberMobileNav } from "@/components/layout/member-sidebar";
 
 export default async function MemberLayout({ children }: { children: React.ReactNode }) {
   const { user, profile } = await requireUser();
@@ -20,18 +20,24 @@ export default async function MemberLayout({ children }: { children: React.React
   }
 
   const name = profile?.full_name || "Member";
+  const role = profile?.role ?? "member";
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
-      <div className="sticky top-0 hidden h-screen border-r border-white/10 bg-zinc-950 lg:block">
+      {/* Desktop sidebar — frosted glass over the ambient background */}
+      <div className="sticky top-0 hidden h-screen border-r border-white/10 glass-strong lg:block">
         <MemberSidebar
           name={name}
           memberId={profile?.member_id ?? null}
-          role={profile?.role ?? "member"}
+          role={role}
           avatarUrl={profile?.avatar_url ?? null}
           unread={unread}
         />
       </div>
+
+      {/* Mobile nav — the sidebar is hidden below lg */}
+      <MemberMobileNav role={role} unread={unread} />
+
       <main className="min-w-0 p-6 md:p-10">{children}</main>
     </div>
   );

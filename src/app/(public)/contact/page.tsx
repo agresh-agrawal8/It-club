@@ -20,7 +20,7 @@ export default function ContactPage() {
         description="Questions, collaborations or just curious? Send us a message."
       />
       <Container className="grid gap-12 py-16 lg:grid-cols-[1.4fr_1fr]">
-        <Card glass>
+        <Card deep>
           <ContactForm />
         </Card>
 
