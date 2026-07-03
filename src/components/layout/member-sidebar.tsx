@@ -15,6 +15,7 @@ import {
   Shield,
 } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
+import { Logo } from "./logo";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -42,14 +43,9 @@ export function MemberSidebar({
 
   return (
     <aside className="flex h-full flex-col gap-6 p-5">
-      <Link href="/" className="flex items-center gap-2.5 px-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 font-mono text-sm font-bold text-white">
-          &gt;_
-        </span>
-        <span className="font-mono text-sm font-semibold tracking-tight text-white">
-          soch<span className="text-brand-300">.exe</span>
-        </span>
-      </Link>
+      <div className="px-2">
+        <Logo />
+      </div>
 
       <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500/20 text-sm font-semibold text-brand-200">

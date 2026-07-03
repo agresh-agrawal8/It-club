@@ -30,6 +30,7 @@
 
   /* Fonts */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", "JetBrains Mono", monospace;
 
   /* Motion */
   --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
@@ -145,5 +146,40 @@
     );
     background-size: 1000px 100%;
     animation: var(--animate-shimmer);
+  }
+
+  /* Fine film grain — subtle premium texture over dark surfaces/images */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  }
+
+  /* Cinematic scrim for text over photography */
+  .hero-scrim {
+    background:
+      linear-gradient(90deg, rgba(3,3,5,0.92) 0%, rgba(3,3,5,0.62) 34%, rgba(3,3,5,0.15) 62%, rgba(3,3,5,0.35) 100%),
+      linear-gradient(0deg, rgba(3,3,5,0.95) 0%, rgba(3,3,5,0.25) 40%, transparent 70%);
+  }
+
+  /* Hairline top border used on premium section dividers */
+  .hairline-t {
+    border-top: 1px solid color-mix(in oklab, white 8%, transparent);
+  }
+
+  /* Thin uppercase tracked label (monospace eyebrow) */
+  .eyebrow {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.7rem;
+  }
+
+  .text-balance {
+    text-wrap: balance;
   }
 }

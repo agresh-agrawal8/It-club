@@ -38,3 +38,6 @@ yarn-error.log*
 agresh-design-system/.git-backup/
 agresh-design-system/node_modules/
 agresh-design-system/dist/
+
+.vercel
+.env*

@@ -21,14 +21,12 @@ export function SectionHeading({
       className={cn("flex flex-col gap-4", align === "center" && "items-center text-center", className)}
       {...props}
     >
-      {eyebrow && (
-        <span className="text-xs font-medium uppercase tracking-[2px] text-brand-400">{eyebrow}</span>
-      )}
-      <h2 className="text-4xl font-semibold tracking-tighter text-white md:text-6xl">{title}</h2>
+      {eyebrow && <span className="eyebrow text-brand-300">{eyebrow}</span>}
+      <h2 className="text-balance text-4xl font-semibold tracking-tighter text-white md:text-5xl lg:text-6xl">
+        {title}
+      </h2>
       {description && (
-        <p className={cn("text-lg leading-relaxed text-zinc-300", align === "center" ? "max-w-2xl" : "max-w-2xl")}>
-          {description}
-        </p>
+        <p className="max-w-2xl text-balance text-lg leading-relaxed text-zinc-400">{description}</p>
       )}
     </div>
   );

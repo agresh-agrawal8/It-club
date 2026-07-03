@@ -54,9 +54,9 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm text-brand-300">Welcome back</p>
-          <h1 className="text-3xl font-semibold tracking-tighter text-white md:text-4xl">
-            Hi, {firstName} 👋
+          <p className="eyebrow text-brand-300">Welcome back</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tighter text-white md:text-4xl">
+            {firstName}
           </h1>
         </div>
         <ButtonLink href="/my-projects/new" size="sm">

@@ -2,23 +2,17 @@ import Link from "next/link";
 import { Github, Instagram, Mail } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { SubscribeForm } from "@/components/features/subscribe-form";
+import { Logo } from "./logo";
 
 export function Footer() {
   return (
     <footer className="mt-24 border-t border-white/10 bg-zinc-950">
       <Container className="grid gap-12 py-16 md:grid-cols-[1.5fr_1fr_1fr_1.5fr]">
         <div className="flex flex-col gap-4">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 font-mono text-sm font-bold text-white">
-              &gt;_
-            </span>
-            <span className="font-mono text-sm font-semibold tracking-tight text-white">
-              soch<span className="text-brand-300">.exe</span>
-            </span>
-          </Link>
+          <Logo />
           <p className="max-w-xs text-sm leading-relaxed text-zinc-400">
-            soch.exe — the official IT Club of Emerald Heights International School. Where ideas
-            compile into reality.
+            The student-run IT Club of Emerald Heights International School. Where ideas compile
+            into reality.
           </p>
         </div>
 

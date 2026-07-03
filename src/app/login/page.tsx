@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Card } from "@/components/ui/card";
+import { Logo } from "@/components/layout/logo";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
@@ -21,15 +22,11 @@ export default function LoginPage() {
             <ArrowLeft className="h-4 w-4" /> Back to site
           </Link>
 
-          <div className="mb-8 flex flex-col items-center gap-3 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 font-mono text-lg font-bold text-white">
-              &gt;_
-            </span>
-            <h1 className="text-3xl font-semibold tracking-tighter text-white">
-              Welcome to <span className="font-mono">soch<span className="text-brand-300">.exe</span></span>
-            </h1>
+          <div className="mb-8 flex flex-col items-center gap-4 text-center">
+            <Logo />
+            <h1 className="mt-2 text-3xl font-semibold tracking-tighter text-white">Member sign in</h1>
             <p className="text-sm text-zinc-400">
-              Sign in with your Member ID (or email) and the password provided by your core team.
+              Use the Member ID (or email) and password provided by your core team.
             </p>
           </div>
 

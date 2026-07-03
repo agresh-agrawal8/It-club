@@ -7,6 +7,7 @@ import { Menu, X, Search, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { Logo } from "./logo";
 
 const NAV_LINKS = [
   { href: "/projects", label: "Projects" },
@@ -23,19 +24,12 @@ export function Navbar({ isAuthed }: { isAuthed: boolean }) {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 glass-strong">
+    <header className="sticky top-0 z-50 border-b border-white/10 glass-strong">
       <Container className="flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 font-mono text-sm font-bold text-white">
-            &gt;_
-          </span>
-          <span className="font-mono text-sm font-semibold tracking-tight text-white">
-            soch<span className="text-brand-300">.exe</span>
-          </span>
-        </Link>
+        <Logo onClick={() => setOpen(false)} />
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav className="hidden items-center gap-0.5 lg:flex">
           {NAV_LINKS.map((link) => {
             const active = pathname === link.href || pathname.startsWith(link.href + "/");
             return (
@@ -43,11 +37,14 @@ export function Navbar({ isAuthed }: { isAuthed: boolean }) {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded-full px-3.5 py-2 text-sm transition-colors",
+                  "relative px-3.5 py-2 text-[13px] tracking-tight transition-colors",
                   active ? "text-white" : "text-zinc-400 hover:text-white",
                 )}
               >
                 {link.label}
+                {active && (
+                  <span className="absolute inset-x-3.5 -bottom-[1px] h-px bg-brand-400" />
+                )}
               </Link>
             );
           })}
