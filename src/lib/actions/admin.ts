@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { memberIdToEmail } from "@/lib/member-id";
 
@@ -14,9 +14,12 @@ const createMemberSchema = z.object({
 });
 
 /**
- * Admin-only: provision a new club member account. Uses the service-role
- * client to create the auth user; the handle_new_user() trigger then creates
- * the matching profile row with the supplied member_id + role.
+ * Admin-only: provision a new club member account.
+ *
+ * Uses the `admin_create_member` Postgres function (SECURITY DEFINER) instead
+ * of the Auth Admin API, so it works with the regular signed-in admin session
+ * and does NOT require the service-role key. The function enforces the admin
+ * check in the database and can never mint a super_admin.
  */
 export async function createMemberAction(formData: FormData) {
   await requireAdmin();
@@ -31,27 +34,24 @@ export async function createMemberAction(formData: FormData) {
     return { error: "Please fill all fields correctly (password ≥ 6 chars)." };
   }
 
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return {
-      error:
-        "Account creation needs the SUPABASE_SERVICE_ROLE_KEY env var (Supabase → Settings → API keys → secret key). Add it on Vercel and locally, then try again.",
-    };
-  }
-
-  const admin = createAdminClient();
   const { fullName, memberId, password, role } = parsed.data;
+  const supabase = await createClient();
 
-  const { error } = await admin.auth.admin.createUser({
-    email: memberIdToEmail(memberId),
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: fullName, member_id: memberId, role },
+  const { error } = await supabase.rpc("admin_create_member", {
+    p_email: memberIdToEmail(memberId),
+    p_password: password,
+    p_full_name: fullName,
+    p_member_id: memberId,
+    p_role: role,
   });
 
   if (error) {
-    return { error: error.message };
+    // Surface the friendly message raised by the DB function
+    // (duplicate Member ID, etc.).
+    return { error: error.message.replace(/^.*?:\s*/, "") || "Could not create the account." };
   }
 
   revalidatePath("/admin/members");
+  revalidatePath("/team");
   return { success: true };
 }

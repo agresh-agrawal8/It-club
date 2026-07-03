@@ -544,6 +544,40 @@ insert into public.settings (key, value) values
   ))
 on conflict (key) do update set value = excluded.value, updated_at = now();
 
+-- ── admin_create_member(): provision members without the service key ──
+create or replace function public.admin_create_member(
+  p_email text, p_password text, p_full_name text, p_member_id text, p_role text default 'member'
+) returns json language plpgsql security definer set search_path = auth, public, extensions as $$
+declare new_id uuid := gen_random_uuid();
+begin
+  if not public.is_admin() then raise exception 'Not authorized — admins only'; end if;
+  if p_role not in ('member', 'admin') then raise exception 'Invalid role'; end if;
+  if length(coalesce(p_password, '')) < 6 then raise exception 'Password must be at least 6 characters'; end if;
+  if exists (select 1 from auth.users where email = lower(p_email)) then raise exception 'An account with that Member ID already exists'; end if;
+  if exists (select 1 from public.profiles where member_id = p_member_id) then raise exception 'That Member ID is already taken'; end if;
+  insert into auth.users (
+    instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, recovery_token, email_change, email_change_token_new
+  ) values (
+    '00000000-0000-0000-0000-000000000000', new_id, 'authenticated', 'authenticated',
+    lower(p_email), crypt(p_password, gen_salt('bf')), now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    jsonb_build_object('full_name', p_full_name, 'member_id', p_member_id, 'role', p_role),
+    now(), now(), '', '', '', ''
+  );
+  insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  values (gen_random_uuid(), new_id, new_id::text,
+    jsonb_build_object('sub', new_id::text, 'email', lower(p_email), 'email_verified', true),
+    'email', now(), now(), now());
+  insert into public.profiles (id, full_name, member_id, role)
+  values (new_id, p_full_name, p_member_id, p_role::user_role)
+  on conflict (id) do update set full_name = excluded.full_name, member_id = excluded.member_id, role = excluded.role;
+  return json_build_object('id', new_id, 'email', lower(p_email));
+end; $$;
+revoke all on function public.admin_create_member(text, text, text, text, text) from public, anon;
+grant execute on function public.admin_create_member(text, text, text, text, text) to authenticated;
+
 -- ── First core-team admin: agresh@agreshagrawal.com ─────────
 -- IMPORTANT: replace CHANGE-ME-STRONG-PASSWORD with a real password
 -- before running. Never commit a real password to git.
