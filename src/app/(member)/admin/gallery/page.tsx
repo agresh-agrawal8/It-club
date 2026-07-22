@@ -5,8 +5,8 @@ import { requireAdmin } from "@/lib/auth";
 import { getGallery } from "@/lib/data";
 import { Card } from "@/components/ui/card";
 import { AdminPageHeader, DeleteButton } from "@/components/admin/admin-shell";
-import { AdminCreateForm } from "@/components/admin/create-form";
-import { addGalleryItemAction, deleteGalleryItemAction } from "@/lib/actions/content";
+import { GalleryUploadForm } from "@/components/admin/gallery-upload-form";
+import { deleteGalleryItemAction } from "@/lib/actions/content";
 
 export const metadata: Metadata = { title: "Manage Gallery" };
 
@@ -18,7 +18,7 @@ export default async function AdminGalleryPage() {
     <div className="flex flex-col gap-8">
       <AdminPageHeader
         title="Gallery"
-        description="Curate the public photo gallery. Paste a hosted image URL (Supabase Storage, Imgur, etc.)."
+        description="Curate the public photo gallery — upload images directly, they're stored in Supabase Storage."
         backHref="/admin"
       />
 
@@ -26,17 +26,7 @@ export default async function AdminGalleryPage() {
         <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-zinc-400">
           Add photo
         </h2>
-        <AdminCreateForm
-          action={addGalleryItemAction}
-          submitLabel="Add to gallery"
-          successMessage="Photo added."
-          fields={[
-            { name: "image_url", label: "Image URL", type: "url", required: true, placeholder: "https://…", span: "full" },
-            { name: "title", label: "Title", placeholder: "Hack Night 2026" },
-            { name: "album", label: "Album", placeholder: "Events" },
-            { name: "caption", label: "Caption", type: "textarea", span: "full" },
-          ]}
-        />
+        <GalleryUploadForm />
       </Card>
 
       <section className="flex flex-col gap-4">

@@ -17,6 +17,7 @@ import {
   Award,
   ImageIcon,
   Mail,
+  Inbox,
 } from "lucide-react";
 import { cn, initials, isAdminRole, roleLabel } from "@/lib/utils";
 import { Logo } from "./logo";
@@ -39,6 +40,7 @@ const ADMIN_NAV = [
   { href: "/admin/achievements", label: "Achievements", icon: Award },
   { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
   { href: "/admin/messages", label: "Messages", icon: Mail },
+  { href: "/admin/submissions", label: "Submissions", icon: Inbox },
 ];
 
 export function MemberSidebar({

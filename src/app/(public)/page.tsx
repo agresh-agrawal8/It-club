@@ -20,6 +20,8 @@ import { LightBeams } from "@/components/landing/light-beams";
 import { Faq } from "@/components/landing/faq";
 import { Testimonials } from "@/components/landing/testimonials";
 import { IdeaForm } from "@/components/landing/idea-form";
+import { SubmissionForm } from "@/components/landing/submission-form";
+import { Reveal } from "@/components/landing/reveal";
 import { ProjectCard } from "@/components/features/project-card";
 import { EventCard } from "@/components/features/event-card";
 import {
@@ -148,7 +150,7 @@ export default async function HomePage() {
       {/* ═══ MANIFESTO + STATS ═══ */}
       <section className="border-t border-white/[0.07] py-24">
         <Container className="grid gap-16 lg:grid-cols-[1.35fr_1fr]">
-          <div className="flex flex-col items-start gap-10">
+          <Reveal className="flex flex-col items-start gap-10">
             <p className="text-balance text-2xl font-medium leading-[1.35] tracking-tight text-white md:text-[2rem]">
               Technology isn&apos;t just about code — it&apos;s about building things that solve
               real problems, teach you something new, and outlast the term they were made in.
@@ -162,21 +164,21 @@ export default async function HomePage() {
                 </div>
               </div>
             )}
-          </div>
+          </Reveal>
 
           <div className="flex flex-col justify-center gap-10">
             {[
               { value: stats.members, label: "Club Members" },
               { value: stats.projects, label: "Projects Shipped" },
               { value: stats.events + stats.competitions, label: "Events & Competitions" },
-            ].map((s) => (
-              <div key={s.label}>
+            ].map((s, i) => (
+              <Reveal key={s.label} delay={i * 120}>
                 <div className="text-5xl font-semibold tracking-tighter text-white md:text-6xl">
                   {s.value}
                   <span className="text-brand-400">+</span>
                 </div>
                 <div className="mt-1 text-sm text-zinc-500">{s.label}</div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </Container>
@@ -185,18 +187,18 @@ export default async function HomePage() {
       {/* ═══ WHAT WE DO ═══ */}
       <section className="py-24">
         <Container className="flex flex-col items-center gap-14">
-          <div className="flex max-w-2xl flex-col items-center gap-4 text-center">
+          <Reveal className="flex max-w-2xl flex-col items-center gap-4 text-center">
             <h2 className="text-balance text-4xl font-semibold tracking-tighter text-white md:text-5xl">
               What We Do
             </h2>
             <p className="text-balance text-zinc-400">
               Six tracks members explore — pick one, mix several, or invent your own.
             </p>
-          </div>
+          </Reveal>
 
           <div className="grid w-full gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {SERVICES.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="glass glass-hover relative overflow-hidden rounded-3xl p-7">
+            {SERVICES.map(({ icon: Icon, title, desc }, i) => (
+              <Reveal key={title} delay={(i % 3) * 100} className="glass glass-hover relative overflow-hidden rounded-3xl p-7">
                 <div
                   className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-60"
                   style={{
@@ -212,7 +214,7 @@ export default async function HomePage() {
                   {title}
                 </h3>
                 <p className="relative mt-2 text-sm leading-relaxed text-zinc-400">{desc}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
 
@@ -241,8 +243,10 @@ export default async function HomePage() {
               </Link>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {events.map((e) => (
-                <EventCard key={e.id} event={e} />
+              {events.map((e, i) => (
+                <Reveal key={e.id} delay={i * 100}>
+                  <EventCard event={e} />
+                </Reveal>
               ))}
             </div>
           </Container>
@@ -322,6 +326,25 @@ export default async function HomePage() {
           <div className="glass-deep rounded-3xl p-7 md:p-9">
             <IdeaForm />
           </div>
+        </Container>
+      </section>
+
+      {/* ═══ SUBMIT YOUR WORK — competition / company / content ═══ */}
+      <section className="border-t border-white/[0.07] py-24" id="submit">
+        <Container className="flex flex-col gap-12">
+          <Reveal className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
+            <span className="eyebrow text-brand-300">Submissions</span>
+            <h2 className="text-balance text-4xl font-semibold tracking-tighter text-white md:text-5xl">
+              Submit your work
+            </h2>
+            <p className="text-balance text-sm leading-relaxed text-zinc-400">
+              Competition entries, documents for company and internship drives, or content for the
+              club — drop it here and the core team will pick it up.
+            </p>
+          </Reveal>
+          <Reveal delay={120} className="glass-deep mx-auto w-full max-w-3xl rounded-3xl p-7 md:p-9">
+            <SubmissionForm />
+          </Reveal>
         </Container>
       </section>
     </>

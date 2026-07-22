@@ -70,6 +70,7 @@ export default async function AdminPage() {
     { label: "Achievements", desc: "Awards & milestones", href: "/admin/achievements", icon: Award },
     { label: "Gallery", desc: "Curate club photos", href: "/admin/gallery", icon: ImageIcon },
     { label: "Messages", desc: "Contact form inbox", href: "/admin/messages", icon: Mail },
+    { label: "Submissions", desc: "Competition & drive documents", href: "/admin/submissions", icon: Inbox },
   ];
 
   return (

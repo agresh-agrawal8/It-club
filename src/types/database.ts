@@ -171,6 +171,19 @@ export interface Subscriber {
   created_at: string;
 }
 
+export interface Submission {
+  id: string;
+  name: string;
+  email: string;
+  category: "competition" | "company" | "content" | "other";
+  title: string;
+  message: string | null;
+  file_url: string | null;
+  link_url: string | null;
+  handled: boolean;
+  created_at: string;
+}
+
 /** Convenience composites returned by joined queries. */
 export interface ProjectWithAuthors extends Project {
   authors: Pick<Profile, "id" | "full_name" | "avatar_url" | "member_id">[];

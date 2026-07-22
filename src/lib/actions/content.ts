@@ -271,3 +271,26 @@ export async function toggleMemberActiveAction(formData: FormData) {
   revalidatePath("/team");
   return;
 }
+
+/* ── Submissions (documents for competitions / drives / content) ── */
+
+export async function toggleSubmissionHandledAction(formData: FormData) {
+  await requireAdmin();
+  const id = formData.get("id") as string;
+  const handled = formData.get("handled") === "true";
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("submissions").update({ handled: !handled }).eq("id", id);
+  revalidatePath("/admin/submissions");
+  return;
+}
+
+export async function deleteSubmissionAction(formData: FormData) {
+  await requireAdmin();
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("submissions").delete().eq("id", id);
+  revalidatePath("/admin/submissions");
+  return;
+}
