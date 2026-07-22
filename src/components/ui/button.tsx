@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export type ButtonVariant = "primary" | "secondary" | "link" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "brand" | "secondary" | "link" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const base =
@@ -16,6 +16,8 @@ const sizeClasses: Record<ButtonSize, string> = {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: "bg-white text-zinc-950 hover:bg-amber-200",
+  brand:
+    "bg-brand-500 text-white hover:bg-brand-400 shadow-[0_8px_28px_-10px_var(--color-brand-500)]",
   secondary:
     "bg-transparent text-white border border-white/20 hover:bg-white/5 hover:border-brand-400/50",
   ghost: "bg-transparent text-zinc-300 hover:bg-white/5 hover:text-white",

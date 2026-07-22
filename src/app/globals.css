@@ -118,6 +118,19 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
+
+  /* Accessibility + safety: never let entrance animations hide content for
+     users who prefer reduced motion. Content lands in its final state. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer utilities {
@@ -237,5 +250,55 @@
 
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* ── Cinematic light beams ──────────────────────────────────
+     Diagonal spotlight streaks raking across the hero, as in the
+     reference layout — rendered in brand violet, not blue. */
+  .beam {
+    position: absolute;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-brand-400) 55%, transparent) 0%,
+      color-mix(in oklab, var(--color-brand-500) 22%, transparent) 45%,
+      transparent 100%
+    );
+    filter: blur(38px);
+    opacity: 0.55;
+    transform-origin: top center;
+  }
+  .beam-soft {
+    filter: blur(60px);
+    opacity: 0.35;
+  }
+
+  /* Vignette that keeps beam edges from touching section borders */
+  .beam-mask {
+    -webkit-mask-image: radial-gradient(ellipse 85% 70% at 50% 25%, black 40%, transparent 100%);
+    mask-image: radial-gradient(ellipse 85% 70% at 50% 25%, black 40%, transparent 100%);
+  }
+
+  /* Faint dotted matrix used behind hero content */
+  .dot-grid {
+    background-image: radial-gradient(
+      color-mix(in oklab, white 16%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 30px 30px;
+  }
+
+  /* Oversized footer wordmark */
+  .watermark {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, white 9%, transparent) 0%,
+      transparent 85%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 0.82;
+    letter-spacing: -0.04em;
   }
 }

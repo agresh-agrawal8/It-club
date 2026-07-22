@@ -10,12 +10,14 @@ import { timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Notifications" };
 
+// Palette-consistent: brand violet, plus the semantic accents already used
+// across the app (amber = attention, emerald = positive, zinc = neutral).
 const typeColor: Record<string, string> = {
   info: "bg-brand-400",
   task: "bg-amber-400",
   event: "bg-emerald-400",
-  project: "bg-blue-400",
-  achievement: "bg-yellow-400",
+  project: "bg-brand-300",
+  achievement: "bg-amber-300",
   system: "bg-zinc-400",
 };
 

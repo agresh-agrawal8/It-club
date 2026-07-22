@@ -53,6 +53,15 @@ export function Footer() {
         </div>
       </Container>
 
+      {/* Oversized wordmark — bleeds off the baseline like the reference */}
+      <div className="relative overflow-hidden" aria-hidden>
+        <Container>
+          <div className="watermark select-none whitespace-nowrap text-center text-[clamp(3.5rem,17vw,15rem)] font-bold">
+            soch.exe
+          </div>
+        </Container>
+      </div>
+
       <div className="border-t border-white/10">
         <Container className="flex flex-col items-center justify-between gap-4 py-6 sm:flex-row">
           <p className="font-mono text-xs text-zinc-500">
