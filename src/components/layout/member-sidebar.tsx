@@ -43,6 +43,7 @@ const ADMIN_NAV = [
   { href: "/admin/messages", label: "Messages", icon: Mail },
   { href: "/admin/submissions", label: "Submissions", icon: Inbox },
   { href: "/admin/applications", label: "Applications", icon: UserPlus },
+  { href: "/admin/notifications", label: "Send notice", icon: Bell },
 ];
 
 export function MemberSidebar({

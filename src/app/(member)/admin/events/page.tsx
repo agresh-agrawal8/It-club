@@ -50,7 +50,7 @@ export default async function AdminEventsPage() {
               ],
             },
             { name: "registration_url", label: "Registration link", type: "url", placeholder: "https://…" },
-            { name: "banner_url", label: "Banner image URL", type: "url", placeholder: "https://…", span: "full" },
+            { name: "banner_url", label: "Banner image", type: "image", bucket: "media", folder: "events" },
             { name: "description", label: "Description", type: "textarea", span: "full", placeholder: "What's happening, who should come…" },
           ]}
         />

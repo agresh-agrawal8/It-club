@@ -317,3 +317,73 @@ export async function deleteJoinRequestAction(formData: FormData) {
   revalidatePath("/admin/applications");
   return;
 }
+
+/* ── Notifications (core team → members) ───────────────────── */
+
+const notifySchema = z.object({
+  title: z.string().min(3, "Give the notification a title"),
+  body: z.string().optional(),
+  link: z.string().optional(),
+  type: z.enum(["info", "task", "event", "project", "achievement", "system"]).default("info"),
+  audience: z.enum(["all", "members", "admins"]).default("all"),
+  urgent: z.string().optional(),
+});
+
+/**
+ * Broadcast a notification to members. Urgent notices pop up the next time
+ * the recipient opens their dashboard.
+ */
+export async function sendNotificationAction(formData: FormData) {
+  await requireAdmin();
+  const parsed = notifySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return fail(parsed.error.errors[0]?.message ?? "Invalid notification");
+  const d = parsed.data;
+  const urgent = d.urgent === "on" || d.urgent === "true";
+
+  const supabase = await createClient();
+  let query = supabase.from("profiles").select("id,role").eq("is_active", true);
+  if (d.audience === "members") query = query.eq("role", "member");
+  if (d.audience === "admins") query = query.in("role", ["admin", "super_admin"]);
+
+  const { data: recipients, error: recErr } = await query;
+  if (recErr) return fail(recErr.message);
+  if (!recipients?.length) return fail("No recipients match that audience.");
+
+  const rows = recipients.map((r: { id: string }) => ({
+    recipient_id: r.id,
+    type: d.type,
+    title: d.title,
+    body: d.body || null,
+    link: d.link || null,
+    urgent,
+  }));
+
+  const { error } = await supabase.from("notifications").insert(rows);
+  if (error) return fail(error.message);
+
+  revalidatePath("/admin/notifications");
+  revalidatePath("/notifications");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function deleteNotificationAction(formData: FormData) {
+  await requireAdmin();
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("notifications").delete().eq("id", id);
+  revalidatePath("/admin/notifications");
+  return;
+}
+
+/** Member: dismiss an urgent popup by marking the notification read. */
+export async function markNotificationReadAction(formData: FormData) {
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("notifications").update({ read: true }).eq("id", id);
+  revalidatePath("/dashboard");
+  revalidatePath("/notifications");
+  return;
+}

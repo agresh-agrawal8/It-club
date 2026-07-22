@@ -19,7 +19,9 @@ import {
   getUpcomingEvents,
   getAchievements,
   getPlatformStats,
+  getTeam,
 } from "@/lib/data";
+import { UrgentAlert } from "@/components/member/urgent-alert";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
@@ -37,14 +39,19 @@ export default async function DashboardPage() {
   // Core team lands on the Core Team Panel; this dashboard is the member home.
   if (isAdminRole(profile?.role)) redirect("/admin");
 
-  const [projects, tasks, notifications, events, achievements, stats] = await Promise.all([
+  const [projects, tasks, notifications, events, achievements, stats, team] = await Promise.all([
     getMyProjects(user.id),
     getMyTasks(user.id),
     getMyNotifications(user.id),
     getUpcomingEvents(4),
     getAchievements(),
     getPlatformStats(),
+    getTeam(),
   ]);
+
+  const urgentNotices = notifications
+    .filter((n) => n.urgent && !n.read)
+    .map((n) => ({ id: n.id, title: n.title, body: n.body, link: n.link, created_at: n.created_at }));
 
   const openTasks = tasks.filter((t) => t.status !== "done");
   const doneProjects = projects.filter((p) => p.status === "completed").length;
@@ -63,6 +70,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
+      {/* Urgent core-team notices pop up on arrival */}
+      {urgentNotices.length > 0 && <UrgentAlert notices={urgentNotices} />}
+
       {/* ── Greeting header ── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -72,9 +82,29 @@ export default async function DashboardPage() {
           </h1>
           <p className="mt-1 text-sm text-zinc-500">{stats.members} members</p>
         </div>
-        <ButtonLink href="/my-projects/new" variant="brand" size="sm" className="rounded-full">
-          <Plus className="h-4 w-4" /> New project
-        </ButtonLink>
+        <div className="flex items-center gap-4">
+          {/* Club roster — overlapping avatars */}
+          {team.length > 0 && (
+            <Link href="/team" className="group flex items-center -space-x-2.5" title="Club members">
+              {team.slice(0, 5).map((m) => (
+                <span
+                  key={m.id}
+                  className="rounded-full ring-2 ring-zinc-950 transition-transform group-hover:translate-x-0"
+                >
+                  <Avatar name={m.full_name || "Member"} src={m.avatar_url} size="sm" />
+                </span>
+              ))}
+              {team.length > 5 && (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-[10px] font-semibold text-zinc-300 ring-2 ring-zinc-950">
+                  +{team.length - 5}
+                </span>
+              )}
+            </Link>
+          )}
+          <ButtonLink href="/my-projects/new" variant="brand" size="sm" className="rounded-full">
+            <Plus className="h-4 w-4" /> New project
+          </ButtonLink>
+        </div>
       </div>
 
       {/* ── Bento grid ── */}

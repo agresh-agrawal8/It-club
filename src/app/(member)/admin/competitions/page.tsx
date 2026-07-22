@@ -51,7 +51,7 @@ export default async function AdminCompetitionsPage() {
             },
             { name: "registration_url", label: "Registration link", type: "url", placeholder: "https://…" },
             { name: "result", label: "Result / placement", placeholder: "1st place — Web category", span: "full" },
-            { name: "banner_url", label: "Banner image URL", type: "url", placeholder: "https://…", span: "full" },
+            { name: "banner_url", label: "Banner image", type: "image", bucket: "media", folder: "competitions" },
             { name: "description", label: "Description", type: "textarea", span: "full" },
           ]}
         />

@@ -160,6 +160,8 @@ export interface Notification {
   body: string | null;
   link: string | null;
   read: boolean;
+  /** Urgent notices pop up on the recipient's dashboard. */
+  urgent: boolean;
   created_at: string;
 }
 

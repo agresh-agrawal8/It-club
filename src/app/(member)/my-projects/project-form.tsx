@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { ImageUploadField } from "@/components/admin/image-upload-field";
 import type { Project } from "@/types/database";
 
 export function ProjectForm({ project }: { project?: Project }) {
@@ -47,7 +48,15 @@ export function ProjectForm({ project }: { project?: Project }) {
         />
       </div>
 
-      <Input name="cover_url" label="Cover image URL" defaultValue={project?.cover_url ?? ""} placeholder="https://…" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <ImageUploadField
+          name="cover_url"
+          label="Cover image"
+          bucket="media"
+          folder="projects"
+          defaultValue={project?.cover_url ?? ""}
+        />
+      </div>
 
       <div className="grid gap-6 sm:grid-cols-3">
         <Input name="github_url" label="GitHub" defaultValue={project?.github_url ?? ""} placeholder="https://github.com/…" />

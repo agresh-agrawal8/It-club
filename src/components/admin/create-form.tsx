@@ -3,17 +3,21 @@
 import { useRef, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ImageUploadField } from "./image-upload-field";
 import { cn } from "@/lib/utils";
 
 export interface AdminField {
   name: string;
   label: string;
-  type?: "text" | "textarea" | "url" | "date" | "datetime-local" | "select";
+  type?: "text" | "textarea" | "url" | "date" | "datetime-local" | "select" | "image";
   placeholder?: string;
   required?: boolean;
   options?: { value: string; label: string }[];
   /** Grid span — "full" stretches across both columns. */
   span?: "half" | "full";
+  /** For type "image": storage bucket + folder to upload into. */
+  bucket?: string;
+  folder?: string;
 }
 
 type ActionResult = { error?: string; success?: boolean } | void;
@@ -59,7 +63,17 @@ export function AdminCreateForm({
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        {fields.map((f) => (
+        {fields.map((f) =>
+          f.type === "image" ? (
+            <ImageUploadField
+              key={f.name}
+              name={f.name}
+              label={f.label}
+              required={f.required}
+              bucket={f.bucket}
+              folder={f.folder}
+            />
+          ) : (
           <label
             key={f.name}
             className={cn("flex flex-col gap-1.5", f.span === "full" && "sm:col-span-2")}
@@ -97,7 +111,8 @@ export function AdminCreateForm({
               />
             )}
           </label>
-        ))}
+          ),
+        )}
       </div>
 
       <div className="flex items-center gap-4">

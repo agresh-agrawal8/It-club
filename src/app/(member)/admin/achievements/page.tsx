@@ -34,7 +34,7 @@ export default async function AdminAchievementsPage() {
             { name: "title", label: "Title", required: true, placeholder: "1st place — District Hackathon" },
             { name: "category", label: "Category", placeholder: "Hackathon / Olympiad / Award" },
             { name: "awarded_on", label: "Date awarded", type: "date" },
-            { name: "image_url", label: "Image URL", type: "url", placeholder: "https://…" },
+            { name: "image_url", label: "Image", type: "image", bucket: "media", folder: "achievements" },
             { name: "description", label: "Description", type: "textarea", span: "full" },
           ]}
         />

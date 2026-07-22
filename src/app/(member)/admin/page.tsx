@@ -12,19 +12,30 @@ import {
   Inbox,
   ImageIcon,
   Mail,
+  Bell,
 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { getPlatformStats } from "@/lib/data";
+import { getPlatformStats, getTeam, getMyNotifications } from "@/lib/data";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
-import { roleLabel, timeAgo } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { UrgentAlert } from "@/components/member/urgent-alert";
+import { roleLabel, timeAgo, isAdminRole } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Core Team Panel" };
 
 export default async function AdminPage() {
-  const { profile } = await requireAdmin();
-  const stats = await getPlatformStats();
+  const { user, profile } = await requireAdmin();
+  const [stats, team, myNotifications] = await Promise.all([
+    getPlatformStats(),
+    getTeam(),
+    getMyNotifications(user.id),
+  ]);
+
+  const urgentNotices = myNotifications
+    .filter((n) => n.urgent && !n.read)
+    .map((n) => ({ id: n.id, title: n.title, body: n.body, link: n.link, created_at: n.created_at }));
 
   // Inbox counters + latest items (best-effort; panel renders without them).
   let messages: { id: string; name: string; subject: string | null; message: string; created_at: string }[] = [];
@@ -87,11 +98,14 @@ export default async function AdminPage() {
     { label: "Competitions", href: "/admin/competitions", icon: Trophy },
     { label: "Achievements", href: "/admin/achievements", icon: Award },
     { label: "Gallery", href: "/admin/gallery", icon: ImageIcon },
+    { label: "Send notice", href: "/admin/notifications", icon: Bell },
     { label: "Projects", href: "/projects", icon: Code2 },
   ];
 
   return (
     <div className="flex flex-col gap-8">
+      {urgentNotices.length > 0 && <UrgentAlert notices={urgentNotices} />}
+
       {/* ── Greeting ── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -168,6 +182,49 @@ export default async function AdminPage() {
               </Link>
             ))}
           </div>
+
+          {/* Club roster */}
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold tracking-tight text-white">
+                Club members <span className="text-zinc-600">({team.length})</span>
+              </h2>
+              <Link
+                href="/admin/members"
+                className="flex items-center gap-1 text-xs text-zinc-500 hover:text-white"
+              >
+                Manage <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            {team.length === 0 ? (
+              <p className="py-4 text-sm text-zinc-500">No members yet.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {team.slice(0, 6).map((m) => (
+                  <li
+                    key={m.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-zinc-950/50 px-3.5 py-2.5"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <Avatar name={m.full_name || "Member"} src={m.avatar_url} size="sm" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-white">
+                          {m.full_name || "Member"}
+                        </span>
+                        <span className="block text-[11px] text-zinc-500">
+                          {m.member_id ?? "—"}
+                          {m.grade ? ` · ${m.grade}` : ""}
+                        </span>
+                      </span>
+                    </span>
+                    <Badge variant={isAdminRole(m.role) ? "accent" : "small"}>
+                      {roleLabel(m.role)}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
 
           {/* Manage rail */}
           <Card className="p-5">
