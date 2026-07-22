@@ -19,18 +19,28 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "soch.exe — IT Club of Emerald Heights International School",
-    template: "%s · soch.exe",
+    default: "Avinya — The IT & AI Club of Emerald Heights International School",
+    template: "%s · Avinya",
   },
   description:
-    "soch.exe — the official IT Club of Emerald Heights International School. Student projects, events, competitions, achievements and a community of makers. Where ideas compile into reality.",
-  keywords: ["soch.exe", "IT Club", "Emerald Heights", "student projects", "coding", "robotics", "hackathon"],
+    "Avinya — the official IT & AI Club of Emerald Heights International School. Student projects, events, competitions, achievements and a community of makers. Where ideas compile into reality.",
+  keywords: [
+    "Avinya",
+    "IT Club",
+    "AI Club",
+    "Emerald Heights",
+    "student projects",
+    "coding",
+    "artificial intelligence",
+    "robotics",
+    "hackathon",
+  ],
   openGraph: {
     type: "website",
-    siteName: "soch.exe",
-    title: "soch.exe — IT Club of Emerald Heights International School",
+    siteName: "Avinya",
+    title: "Avinya — The IT & AI Club of Emerald Heights International School",
     description:
-      "Where ideas compile into reality — projects, events, competitions and achievements from the EHIS IT Club.",
+      "Where ideas compile into reality — projects, events, competitions and achievements from the Avinya IT & AI Club.",
     url: siteUrl,
   },
   twitter: { card: "summary_large_image" },

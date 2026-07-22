@@ -18,7 +18,7 @@ export function LoginForm() {
       <Input
         name="memberId"
         label="Member ID or Email"
-        placeholder="SOCH-0001 or you@email.com"
+        placeholder="AVN-0001 or you@email.com"
         autoComplete="username"
         required
       />

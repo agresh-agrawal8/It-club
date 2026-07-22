@@ -35,7 +35,7 @@ export function Hero({
         {/* Photograph */}
         <Image
           src="/it-club-lab.png"
-          alt="Students of the soch.exe IT Club at work in the computer lab at Emerald Heights International School"
+          alt="Students of the Avinya IT & AI Club at work in the computer lab at Emerald Heights International School"
           fill
           priority
           sizes="100vw"

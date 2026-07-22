@@ -6,9 +6,9 @@
 
 insert into public.settings (key, value) values
   ('homepage', jsonb_build_object(
-    'hero_eyebrow', 'soch.exe · Emerald Heights International School',
+    'hero_eyebrow', 'Avinya · Emerald Heights International School',
     'hero_title', 'Where ideas compile into reality',
-    'hero_subtitle', 'soch.exe is the official IT Club of Emerald Heights — projects, events, competitions and a community of student makers.',
+    'hero_subtitle', 'Avinya is the official IT & AI Club of Emerald Heights — projects, events, competitions and a community of student makers.',
     'primary_cta_label', 'Explore projects',
     'primary_cta_href', '/projects',
     'secondary_cta_label', 'Meet the team',

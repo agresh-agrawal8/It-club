@@ -9,10 +9,10 @@ export function Footer() {
     <footer className="mt-24 border-t border-white/10 bg-zinc-950">
       <Container className="grid gap-12 py-16 md:grid-cols-[1.5fr_1fr_1fr_1.5fr]">
         <div className="flex flex-col gap-4">
-          <Logo />
+          <Logo showTagline />
           <p className="max-w-xs text-sm leading-relaxed text-zinc-400">
-            The student-run IT Club of Emerald Heights International School. Where ideas compile
-            into reality.
+            The student-run IT &amp; AI Club of Emerald Heights International School. Where ideas
+            compile into reality.
           </p>
         </div>
 
@@ -56,8 +56,8 @@ export function Footer() {
       {/* Oversized wordmark — bleeds off the baseline like the reference */}
       <div className="relative overflow-hidden" aria-hidden>
         <Container>
-          <div className="watermark select-none whitespace-nowrap text-center text-[clamp(3.5rem,17vw,15rem)] font-bold">
-            soch.exe
+          <div className="watermark select-none whitespace-nowrap text-center text-[clamp(3.5rem,19vw,17rem)] font-bold">
+            Avinya
           </div>
         </Container>
       </div>
@@ -65,7 +65,7 @@ export function Footer() {
       <div className="border-t border-white/10">
         <Container className="flex flex-col items-center justify-between gap-4 py-6 sm:flex-row">
           <p className="font-mono text-xs text-zinc-500">
-            © {new Date().getFullYear()} soch.exe · EHIS IT Club. All rights reserved.
+            © {new Date().getFullYear()} Avinya · EHIS IT &amp; AI Club. All rights reserved.
           </p>
           <div className="flex items-center gap-3">
             <a href="mailto:agresh@agreshagrawal.com" aria-label="Email" className="text-zinc-500 hover:text-white">

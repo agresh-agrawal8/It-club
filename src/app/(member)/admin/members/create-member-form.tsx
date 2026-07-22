@@ -24,7 +24,7 @@ export function CreateMemberForm() {
     <form ref={formRef} action={onSubmit} className="flex flex-col gap-5">
       <div className="grid gap-5 sm:grid-cols-2">
         <Input name="fullName" label="Full name" placeholder="Student name" required />
-        <Input name="memberId" label="Member ID" placeholder="SOCH-0002" required />
+        <Input name="memberId" label="Member ID" placeholder="AVN-0004" required />
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <Input

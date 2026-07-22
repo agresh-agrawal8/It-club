@@ -43,7 +43,7 @@ const SERVICES = [
 
 const FAQS = [
   {
-    q: "How do I join soch.exe?",
+    q: "How do I join Avinya?",
     a: "Membership is open to all EHIS students. Reach out through the form below or talk to any core team member — we'll set up your member account and you can start publishing projects right away.",
   },
   {
@@ -67,7 +67,7 @@ const FAQS = [
 const TESTIMONIALS = [
   {
     quote:
-      "Joining soch.exe completely changed how I think about building things. I went from writing my first HTML page to shipping a full project that people actually use — with seniors who genuinely wanted to help.",
+      "Joining Avinya completely changed how I think about building things. I went from writing my first HTML page to shipping a full project that people actually use — with seniors who genuinely wanted to help.",
     name: "Club Member",
     role: "Grade 11",
   },
@@ -75,7 +75,7 @@ const TESTIMONIALS = [
     quote:
       "The best part is nobody gatekeeps here. You have an idea, you build it, you put it on the site. That freedom is why our members keep coming back and keep shipping.",
     name: "Core Team",
-    role: "soch.exe",
+    role: "Avinya",
   },
 ];
 
@@ -100,7 +100,7 @@ export default async function HomePage() {
 
         <Container className="relative flex flex-col items-center gap-7 pb-16 pt-24 text-center md:pt-32">
           <Badge variant="accent" className="animate-fade-in rounded-full">
-            {content.hero_eyebrow ?? "soch.exe · Emerald Heights International School"}
+            {content.hero_eyebrow ?? "Avinya · Emerald Heights International School"}
           </Badge>
 
           <h1 className="animate-fade-up max-w-4xl text-balance text-4xl font-semibold leading-[1.06] tracking-tighter text-white sm:text-5xl lg:text-6xl xl:text-7xl">
@@ -109,7 +109,7 @@ export default async function HomePage() {
 
           <p className="max-w-2xl animate-fade-up text-balance text-base leading-relaxed text-zinc-400">
             {content.hero_subtitle ??
-              "soch.exe is the official IT Club of Emerald Heights — projects, events, competitions and a community of student makers."}
+              "Avinya is the official IT & AI Club of Emerald Heights — projects, events, competitions and a community of student makers."}
           </p>
 
           <ButtonLink
@@ -265,7 +265,7 @@ export default async function HomePage() {
               Got questions? We&apos;ve got answers.
             </h2>
             <p className="max-w-sm text-sm leading-relaxed text-zinc-400">
-              Everything students usually ask before joining soch.exe — how it works, what you&apos;ll
+              Everything students usually ask before joining Avinya — how it works, what you&apos;ll
               build, and how to get started.
             </p>
             <ButtonLink href="/contact" variant="brand" size="sm" className="w-fit rounded-full">
