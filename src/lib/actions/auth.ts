@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { memberIdToEmail } from "@/lib/member-id";
+import { homeForRole } from "@/lib/utils";
 
 const loginSchema = z.object({
   memberId: z.string().min(1, "Member ID or email is required"),
@@ -46,7 +47,7 @@ export async function loginAction(
   }
 
   // Land each role in its own home: core team → Core Team Panel,
-  // members → member dashboard. An explicit ?redirect wins.
+  // teachers → supervisor panel, members → dashboard. ?redirect wins.
   let home = "/dashboard";
   if (data.user) {
     const { data: profile } = await supabase
@@ -54,9 +55,7 @@ export async function loginAction(
       .select("role")
       .eq("id", data.user.id)
       .single();
-    if (profile?.role === "admin" || profile?.role === "super_admin") {
-      home = "/admin";
-    }
+    home = homeForRole(profile?.role);
   }
 
   const explicit = (formData.get("redirect") as string) || "";

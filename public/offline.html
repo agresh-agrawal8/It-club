@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline · Avinya</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0; min-height: 100vh; display: grid; place-items: center;
+        background: #09090b; color: #fafafa; text-align: center; padding: 24px;
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      }
+      .mark {
+        width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 24px;
+        background: linear-gradient(160deg, #8b5cf6, #6d28d9); display: grid; place-items: center;
+      }
+      .mark span { width: 16px; height: 16px; background: #fff; transform: rotate(45deg); border-radius: 2px; }
+      h1 { font-size: 22px; letter-spacing: -0.02em; margin: 0 0 8px; }
+      p { color: #a1a1aa; font-size: 14px; line-height: 1.6; margin: 0 0 24px; max-width: 320px; }
+      button {
+        background: #8b5cf6; color: #fff; border: 0; border-radius: 999px;
+        padding: 10px 22px; font-size: 14px; font-weight: 500; cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <div class="mark"><span></span></div>
+      <h1>You're offline</h1>
+      <p>Avinya needs a connection to load this page. Check your network and try again.</p>
+      <button onclick="location.reload()">Retry</button>
+    </div>
+  </body>
+</html>

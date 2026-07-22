@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { MemberSidebar, MemberMobileNav } from "@/components/layout/member-sidebar";
+import { MobileTabBar } from "@/components/layout/mobile-tabbar";
 
 export default async function MemberLayout({ children }: { children: React.ReactNode }) {
   const { user, profile } = await requireUser();
@@ -35,10 +36,13 @@ export default async function MemberLayout({ children }: { children: React.React
         />
       </div>
 
-      {/* Mobile nav — the sidebar is hidden below lg */}
+      {/* Mobile: brand bar on top, tab bar docked at the bottom */}
       <MemberMobileNav role={role} unread={unread} />
 
-      <main className="min-w-0 p-6 md:p-10">{children}</main>
+      {/* pb-24 clears the fixed bottom tab bar on phones */}
+      <main className="min-w-0 p-4 pb-24 sm:p-6 md:p-10 lg:pb-10">{children}</main>
+
+      <MobileTabBar role={role} unread={unread} />
     </div>
   );
 }

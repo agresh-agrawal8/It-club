@@ -10,7 +10,7 @@ const createMemberSchema = z.object({
   fullName: z.string().min(2),
   memberId: z.string().min(3),
   password: z.string().min(6),
-  role: z.enum(["member", "admin"]).default("member"),
+  role: z.enum(["member", "teacher", "admin"]).default("member"),
 });
 
 /**

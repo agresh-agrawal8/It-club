@@ -7,11 +7,29 @@ export function isAdminRole(role: UserRole | string | null | undefined) {
   return role === "admin" || role === "super_admin";
 }
 
+/** Teachers get read-only oversight — never write access. */
+export function isTeacherRole(role: UserRole | string | null | undefined) {
+  return role === "teacher";
+}
+
+/** Staff = anyone with oversight of the club (teachers + core team). */
+export function isStaffRole(role: UserRole | string | null | undefined) {
+  return isAdminRole(role) || isTeacherRole(role);
+}
+
 /** Human label for a role. */
 export function roleLabel(role: UserRole | string | null | undefined) {
   if (role === "super_admin") return "Master Admin";
   if (role === "admin") return "Core Team";
+  if (role === "teacher") return "Teacher";
   return "Member";
+}
+
+/** Where each role lands after signing in. */
+export function homeForRole(role: UserRole | string | null | undefined) {
+  if (isAdminRole(role)) return "/admin";
+  if (isTeacherRole(role)) return "/teacher";
+  return "/dashboard";
 }
 
 /** Tailwind-aware className combiner (from the Agresh design system). */

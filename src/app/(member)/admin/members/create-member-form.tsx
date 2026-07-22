@@ -36,6 +36,7 @@ export function CreateMemberForm() {
         />
         <Select name="role" label="Role" defaultValue="member">
           <option value="member">Member</option>
+          <option value="teacher">Teacher (read-only)</option>
           <option value="admin">Admin / Core team</option>
         </Select>
       </div>

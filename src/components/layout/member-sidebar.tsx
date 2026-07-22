@@ -19,8 +19,9 @@ import {
   Mail,
   Inbox,
   UserPlus,
+  Eye,
 } from "lucide-react";
-import { cn, initials, isAdminRole, roleLabel } from "@/lib/utils";
+import { cn, initials, isAdminRole, isTeacherRole, roleLabel } from "@/lib/utils";
 import { Logo } from "./logo";
 
 const NAV = [
@@ -30,6 +31,14 @@ const NAV = [
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/profile", label: "My Profile", icon: User },
+];
+
+/** Teacher panel — read-only oversight. */
+const TEACHER_NAV = [
+  { href: "/teacher", label: "Overview", icon: Eye },
+  { href: "/team", label: "Members", icon: Users },
+  { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/events", label: "Events", icon: CalendarDays },
 ];
 
 /** Core Team Panel navigation — shown only to admins. */
@@ -110,7 +119,41 @@ export function MemberSidebar({
           </>
         )}
 
-        {NAV.filter(({ href }) => !(isAdminRole(role) && href === "/dashboard")).map(
+        {isTeacherRole(role) && (
+          <>
+            <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[2px] text-sky-300/70">
+              Teacher Panel
+            </p>
+            {TEACHER_NAV.map(({ href, label, icon: Icon }) => {
+              const active =
+                href === "/teacher" ? pathname === "/teacher" : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                    active
+                      ? "bg-sky-500/15 text-sky-200"
+                      : "text-zinc-400 hover:bg-sky-500/10 hover:text-sky-200",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Link>
+              );
+            })}
+            <p className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-[2px] text-zinc-600">
+              Personal
+            </p>
+          </>
+        )}
+
+        {NAV.filter(
+          ({ href }) =>
+            !(isAdminRole(role) && href === "/dashboard") &&
+            !(isTeacherRole(role) && ["/dashboard", "/my-projects", "/my-tasks"].includes(href)),
+        ).map(
           ({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
@@ -174,7 +217,14 @@ export function MemberMobileNav({ role, unread }: { role: string; unread: number
   // it redirects them to /admin anyway).
   const links = isAdminRole(role)
     ? [...ADMIN_NAV, ...NAV.filter((l) => l.href !== "/dashboard")]
-    : NAV;
+    : isTeacherRole(role)
+      ? [
+          ...TEACHER_NAV,
+          ...NAV.filter(
+            (l) => !["/dashboard", "/my-projects", "/my-tasks"].includes(l.href),
+          ),
+        ]
+      : NAV;
 
   return (
     <div className="sticky top-0 z-40 flex flex-col gap-1 border-b border-white/10 glass-strong lg:hidden">

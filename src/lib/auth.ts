@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isAdminRole } from "@/lib/utils";
+import { isAdminRole, isStaffRole, homeForRole } from "@/lib/utils";
 import type { Profile } from "@/types/database";
 
 /**
@@ -36,9 +36,19 @@ export async function requireUser() {
   return current;
 }
 
-/** Require an admin; redirect non-admins to their dashboard. */
+/** Require an admin; redirect everyone else to their own home. */
 export async function requireAdmin() {
   const current = await requireUser();
-  if (!isAdminRole(current.profile?.role)) redirect("/dashboard");
+  if (!isAdminRole(current.profile?.role)) redirect(homeForRole(current.profile?.role));
+  return current;
+}
+
+/**
+ * Require staff (teacher or core team) for the read-only supervisor panel.
+ * Teachers never get write access — that is enforced by RLS (is_admin()).
+ */
+export async function requireStaff() {
+  const current = await requireUser();
+  if (!isStaffRole(current.profile?.role)) redirect(homeForRole(current.profile?.role));
   return current;
 }

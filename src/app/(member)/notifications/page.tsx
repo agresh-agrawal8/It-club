@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { markNotificationReadAction, markAllNotificationsReadAction } from "@/lib/actions/member";
+import { PushManager } from "@/components/pwa/push-manager";
 import { timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Notifications" };
@@ -43,6 +44,9 @@ export default async function NotificationsPage() {
           </form>
         )}
       </div>
+
+      {/* Device notification opt-in (PWA / web push) */}
+      <PushManager vapidKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""} />
 
       {notifications.length ? (
         <div className="flex flex-col gap-2">

@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -45,12 +46,32 @@ export const metadata: Metadata = {
   },
   twitter: { card: "summary_large_image" },
   robots: { index: true, follow: true },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Avinya",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#8b5cf6",
+  colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable}`} suppressHydrationWarning>
-      <body className="min-h-screen bg-surface-0 text-zinc-100 antialiased">{children}</body>
+      <body className="min-h-screen bg-surface-0 text-zinc-100 antialiased">
+        {children}
+        <InstallPrompt />
+      </body>
     </html>
   );
 }

@@ -69,7 +69,7 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6 md:gap-8">
       {/* Urgent core-team notices pop up on arrival */}
       {urgentNotices.length > 0 && <UrgentAlert notices={urgentNotices} />}
 
@@ -77,7 +77,7 @@ export default async function DashboardPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs text-zinc-500">{today}</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tighter text-white md:text-4xl">
+          <h1 className="mt-1 text-2xl font-semibold tracking-tighter text-white sm:text-3xl md:text-4xl">
             Welcome in, {firstName}
           </h1>
           <p className="mt-1 text-sm text-zinc-500">{stats.members} members</p>
@@ -108,10 +108,10 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Bento grid ── */}
-      <div className="grid gap-5 lg:grid-cols-[300px_1fr_1fr]">
+      <div className="grid gap-4 sm:gap-5 lg:grid-cols-[300px_1fr_1fr]">
         {/* Profile column */}
         <div className="flex flex-col gap-5">
-          <Card deep className="relative overflow-hidden p-6">
+          <Card deep className="relative overflow-hidden p-5 sm:p-6">
             <span className="flex w-fit items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[10px] uppercase tracking-wide text-emerald-300">
               <Circle className="h-1.5 w-1.5 fill-emerald-400 text-emerald-400" /> Online
             </span>
@@ -174,7 +174,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Progress column — open tasks */}
-        <Card className="flex flex-col gap-5 p-6">
+        <Card className="flex flex-col gap-5 p-5 sm:p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold tracking-tight text-white">Progress</h2>
             <Link href="/my-tasks" className="text-xs text-zinc-500 hover:text-white">
@@ -253,7 +253,7 @@ export default async function DashboardPage() {
 
         {/* Right rail — timeline of events + notifications */}
         <div className="flex flex-col gap-5">
-          <Card className="p-6">
+          <Card className="p-5 sm:p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold tracking-tight text-white">Upcoming events</h2>
               <Link href="/calendar" className="text-xs text-zinc-500 hover:text-white">
@@ -287,7 +287,7 @@ export default async function DashboardPage() {
             )}
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-5 sm:p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-white">
                 Notifications
@@ -323,7 +323,7 @@ export default async function DashboardPage() {
           </Card>
 
           {achievements.length > 0 && (
-            <Card className="p-6">
+            <Card className="p-5 sm:p-6">
               <h2 className="mb-4 text-sm font-semibold tracking-tight text-white">Club wins</h2>
               <ul className="flex flex-col gap-2.5">
                 {achievements.slice(0, 3).map((a) => (

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
+import { sendPushToProfiles } from "@/lib/push";
 
 /**
  * Core Team Panel actions. All of these run as the signed-in admin through
@@ -361,10 +362,27 @@ export async function sendNotificationAction(formData: FormData) {
   const { error } = await supabase.from("notifications").insert(rows);
   if (error) return fail(error.message);
 
+  // Fan out to registered devices. Best-effort: a push failure must not
+  // fail the broadcast that already saved successfully.
+  const push = await sendPushToProfiles(
+    recipients.map((r: { id: string }) => r.id),
+    {
+      title: urgent ? `Urgent: ${d.title}` : d.title,
+      body: d.body || "Open Avinya for details.",
+      url: d.link || "/notifications",
+      urgent,
+      tag: `avinya-${Date.now()}`,
+    },
+  );
+
   revalidatePath("/admin/notifications");
   revalidatePath("/notifications");
   revalidatePath("/dashboard");
-  return { success: true };
+  return {
+    success: true,
+    pushed: push.sent,
+    recipients: rows.length,
+  };
 }
 
 export async function deleteNotificationAction(formData: FormData) {
