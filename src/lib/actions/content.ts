@@ -294,3 +294,26 @@ export async function deleteSubmissionAction(formData: FormData) {
   revalidatePath("/admin/submissions");
   return;
 }
+
+/* ── Join requests (membership applications) ───────────────── */
+
+export async function setJoinStatusAction(formData: FormData) {
+  await requireAdmin();
+  const id = formData.get("id") as string;
+  const status = formData.get("status") as string;
+  if (!id || !["pending", "approved", "rejected"].includes(status)) return;
+  const supabase = await createClient();
+  await supabase.from("join_requests").update({ status }).eq("id", id);
+  revalidatePath("/admin/applications");
+  return;
+}
+
+export async function deleteJoinRequestAction(formData: FormData) {
+  await requireAdmin();
+  const id = formData.get("id") as string;
+  if (!id) return;
+  const supabase = await createClient();
+  await supabase.from("join_requests").delete().eq("id", id);
+  revalidatePath("/admin/applications");
+  return;
+}

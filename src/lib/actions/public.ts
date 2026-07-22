@@ -111,3 +111,45 @@ export async function submitDocumentAction(_prev: unknown, formData: FormData) {
     return { error: "Submissions are not available yet." };
   }
 }
+
+const joinSchema = z.object({
+  name: z.string().min(2, "Please enter your name"),
+  email: z.string().email("Enter a valid email"),
+  grade: z.string().min(1, "Select your class"),
+  phone: z.string().optional(),
+  experience: z.string().optional(),
+  why: z.string().min(10, "Tell us a little more (at least 10 characters)"),
+});
+
+/** Public: membership application from the /join page. */
+export async function joinRequestAction(_prev: unknown, formData: FormData) {
+  const parsed = joinSchema.safeParse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    grade: formData.get("grade"),
+    phone: formData.get("phone"),
+    experience: formData.get("experience"),
+    why: formData.get("why"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0]?.message ?? "Please complete the form." };
+  }
+  const interests = formData.getAll("interests").map(String).filter(Boolean);
+
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from("join_requests").insert({
+      ...parsed.data,
+      phone: parsed.data.phone || null,
+      experience: parsed.data.experience || null,
+      interests,
+    });
+    if (error) return { error: "Could not send your application. Please try again." };
+    return {
+      success:
+        "Application received! The core team will review it and reach out on your email with your Member ID.",
+    };
+  } catch {
+    return { error: "Applications are not available right now." };
+  }
+}

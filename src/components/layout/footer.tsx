@@ -36,6 +36,7 @@ export function Footer() {
             ["Gallery", "/gallery"],
             ["Achievements", "/achievements"],
             ["Search", "/search"],
+            ["Join the club", "/join"],
             ["Member login", "/login"],
           ].map(([label, href]) => (
             <Link key={href} href={href} className="text-sm text-zinc-400 transition-colors hover:text-white">

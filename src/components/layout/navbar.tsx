@@ -62,9 +62,14 @@ export function Navbar({ isAuthed }: { isAuthed: boolean }) {
               <LayoutDashboard className="h-4 w-4" /> Dashboard
             </ButtonLink>
           ) : (
-            <ButtonLink href="/login" variant="brand" size="sm" className="rounded-full">
-              Member login
-            </ButtonLink>
+            <>
+              <ButtonLink href="/login" variant="ghost" size="sm" className="rounded-full">
+                Member login
+              </ButtonLink>
+              <ButtonLink href="/join" variant="brand" size="sm" className="rounded-full">
+                Join the club
+              </ButtonLink>
+            </>
           )}
         </div>
 
@@ -98,13 +103,24 @@ export function Navbar({ isAuthed }: { isAuthed: boolean }) {
               </ButtonLink>
               <ButtonLink
                 href={isAuthed ? "/dashboard" : "/login"}
-                variant="primary"
+                variant="secondary"
                 size="sm"
                 className="flex-1"
                 onClick={() => setOpen(false)}
               >
                 {isAuthed ? "Dashboard" : "Login"}
               </ButtonLink>
+              {!isAuthed && (
+                <ButtonLink
+                  href="/join"
+                  variant="brand"
+                  size="sm"
+                  className="flex-1 rounded-full"
+                  onClick={() => setOpen(false)}
+                >
+                  Join
+                </ButtonLink>
+              )}
             </div>
           </Container>
         </div>

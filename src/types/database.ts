@@ -189,3 +189,16 @@ export interface ProjectWithAuthors extends Project {
   authors: Pick<Profile, "id" | "full_name" | "avatar_url" | "member_id">[];
   media?: ProjectMedia[];
 }
+
+export interface JoinRequest {
+  id: string;
+  name: string;
+  email: string;
+  grade: string | null;
+  phone: string | null;
+  interests: string[];
+  experience: string | null;
+  why: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+}

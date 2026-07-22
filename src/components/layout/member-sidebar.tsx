@@ -18,6 +18,7 @@ import {
   ImageIcon,
   Mail,
   Inbox,
+  UserPlus,
 } from "lucide-react";
 import { cn, initials, isAdminRole, roleLabel } from "@/lib/utils";
 import { Logo } from "./logo";
@@ -41,6 +42,7 @@ const ADMIN_NAV = [
   { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
   { href: "/admin/messages", label: "Messages", icon: Mail },
   { href: "/admin/submissions", label: "Submissions", icon: Inbox },
+  { href: "/admin/applications", label: "Applications", icon: UserPlus },
 ];
 
 export function MemberSidebar({

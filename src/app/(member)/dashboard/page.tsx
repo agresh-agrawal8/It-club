@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   FolderKanban,
   CheckSquare,
   Bell,
   CalendarDays,
   Award,
-  ArrowRight,
+  ArrowUpRight,
   Plus,
+  Circle,
 } from "lucide-react";
-import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import {
   getMyProjects,
@@ -17,13 +18,14 @@ import {
   getMyNotifications,
   getUpcomingEvents,
   getAchievements,
+  getPlatformStats,
 } from "@/lib/data";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressBar } from "@/components/ui/progress";
-import { formatDate, timeAgo, isAdminRole } from "@/lib/utils";
+import { formatDate, timeAgo, isAdminRole, roleLabel } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -34,194 +36,277 @@ export default async function DashboardPage() {
 
   // Core team lands on the Core Team Panel; this dashboard is the member home.
   if (isAdminRole(profile?.role)) redirect("/admin");
-  const [projects, tasks, notifications, events, achievements] = await Promise.all([
+
+  const [projects, tasks, notifications, events, achievements, stats] = await Promise.all([
     getMyProjects(user.id),
     getMyTasks(user.id),
     getMyNotifications(user.id),
-    getUpcomingEvents(3),
+    getUpcomingEvents(4),
     getAchievements(),
+    getPlatformStats(),
   ]);
 
   const openTasks = tasks.filter((t) => t.status !== "done");
-  const unread = notifications.filter((n) => !n.read);
+  const doneProjects = projects.filter((p) => p.status === "completed").length;
+  const unread = notifications.filter((n) => !n.read).length;
   const firstName = (profile?.full_name || "there").split(" ")[0];
 
-  const stats = [
-    { label: "Projects", value: projects.length, icon: FolderKanban, href: "/my-projects" },
-    { label: "Open tasks", value: openTasks.length, icon: CheckSquare, href: "/my-tasks" },
-    { label: "Unread", value: unread.length, icon: Bell, href: "/notifications" },
-    { label: "Events", value: events.length, icon: CalendarDays, href: "/calendar" },
-  ];
+  const daysInClub = profile?.created_at
+    ? Math.max(1, Math.round((Date.now() - new Date(profile.created_at).getTime()) / 86400000))
+    : 1;
+
+  const today = new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+  });
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Header */}
+      {/* ── Greeting header ── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow text-brand-300">Welcome back</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tighter text-white md:text-4xl">
-            {firstName}
+          <p className="text-xs text-zinc-500">{today}</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tighter text-white md:text-4xl">
+            Welcome in, {firstName}
           </h1>
+          <p className="mt-1 text-sm text-zinc-500">{stats.members} members</p>
         </div>
-        <ButtonLink href="/my-projects/new" size="sm">
+        <ButtonLink href="/my-projects/new" variant="brand" size="sm" className="rounded-full">
           <Plus className="h-4 w-4" /> New project
         </ButtonLink>
       </div>
 
-      {/* Stat tiles */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map(({ label, value, icon: Icon, href }) => (
-          <Link key={label} href={href}>
-            <Card glass hoverLift className="flex items-center gap-4 p-5">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-300">
-                <Icon className="h-5 w-5" />
-              </div>
+      {/* ── Bento grid ── */}
+      <div className="grid gap-5 lg:grid-cols-[300px_1fr_1fr]">
+        {/* Profile column */}
+        <div className="flex flex-col gap-5">
+          <Card deep className="relative overflow-hidden p-6">
+            <span className="flex w-fit items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[10px] uppercase tracking-wide text-emerald-300">
+              <Circle className="h-1.5 w-1.5 fill-emerald-400 text-emerald-400" /> Online
+            </span>
+            <div className="mt-5 flex flex-col items-center gap-4 text-center">
+              <Avatar name={profile?.full_name || "Member"} src={profile?.avatar_url} size="xl" />
               <div>
-                <div className="text-2xl font-semibold tracking-tighter text-white">{value}</div>
-                <div className="text-xs uppercase tracking-wide text-zinc-500">{label}</div>
+                <h2 className="text-lg font-semibold tracking-tight text-white">
+                  {profile?.full_name || "Member"}
+                </h2>
+                <p className="mt-0.5 text-xs text-zinc-500">
+                  {profile?.headline ?? roleLabel(profile?.role)}
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/profile"
+              aria-label="Edit profile"
+              className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition-colors hover:border-brand-400/50 hover:text-brand-300"
+            >
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </Card>
+
+          {/* Big stat tiles */}
+          <div className="grid grid-cols-2 gap-5">
+            <Card className="p-5">
+              <div className="text-4xl font-semibold tracking-tighter text-white">{daysInClub}</div>
+              <div className="mt-1.5 text-xs leading-snug text-zinc-500">
+                Days
+                <br />
+                in the club
               </div>
             </Card>
-          </Link>
-        ))}
-      </div>
+            <Card className="p-5">
+              <div className="text-4xl font-semibold tracking-tighter text-white">{doneProjects}</div>
+              <div className="mt-1.5 text-xs leading-snug text-zinc-500">
+                Done
+                <br />
+                projects
+              </div>
+            </Card>
+          </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Upcoming tasks */}
-        <Widget title="Upcoming tasks" href="/my-tasks">
+          {/* Skill tags scatter */}
+          {(profile?.skills?.length ?? 0) > 0 && (
+            <Card className="p-5">
+              <div className="flex flex-wrap gap-2">
+                {profile!.skills.slice(0, 8).map((s, i) => (
+                  <span
+                    key={s}
+                    className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-zinc-300"
+                    style={{ transform: `rotate(${((i % 5) - 2) * 2}deg)` }}
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Progress column — open tasks */}
+        <Card className="flex flex-col gap-5 p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold tracking-tight text-white">Progress</h2>
+            <Link href="/my-tasks" className="text-xs text-zinc-500 hover:text-white">
+              View all
+            </Link>
+          </div>
           {openTasks.length ? (
-            <ul className="flex flex-col gap-3">
-              {openTasks.slice(0, 4).map((t) => (
-                <li key={t.id} className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-zinc-950 p-4">
+            <ul className="flex flex-col gap-2.5">
+              {openTasks.slice(0, 6).map((t) => (
+                <li
+                  key={t.id}
+                  className="group rounded-2xl border border-white/[0.07] bg-zinc-950/50 p-4 transition-colors hover:border-white/15"
+                >
                   <div className="flex items-start justify-between gap-3">
-                    <span className="text-sm font-medium text-white">{t.title}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500/15 text-brand-300">
+                        <CheckSquare className="h-4 w-4" />
+                      </span>
+                      <div>
+                        <div className="text-sm font-medium text-white">{t.title}</div>
+                        {t.deadline && (
+                          <div className="mt-0.5 text-[11px] text-zinc-500">
+                            Due {formatDate(t.deadline)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <Badge variant={priorityVariant[t.priority]}>{t.priority}</Badge>
                   </div>
-                  <ProgressBar value={t.progress} />
-                  <div className="flex items-center justify-between text-xs text-zinc-500">
-                    <span>{t.progress}% complete</span>
-                    {t.deadline && <span>Due {formatDate(t.deadline)}</span>}
+                  <div className="mt-3 flex items-center gap-3">
+                    <ProgressBar value={t.progress} className="flex-1" />
+                    <span className="text-[11px] tabular-nums text-zinc-500">{t.progress}%</span>
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <MiniEmpty icon={<CheckSquare className="h-5 w-5" />} text="No open tasks. You're all caught up!" />
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 py-10 text-center">
+              <CheckSquare className="h-5 w-5 text-zinc-600" />
+              <p className="text-sm text-zinc-500">No open tasks — you&apos;re all caught up.</p>
+            </div>
           )}
-        </Widget>
 
-        {/* Notifications */}
-        <Widget title="Recent notifications" href="/notifications">
-          {notifications.length ? (
-            <ul className="flex flex-col gap-2">
-              {notifications.slice(0, 5).map((n) => (
-                <li
-                  key={n.id}
-                  className="flex items-start gap-3 rounded-2xl border border-white/10 bg-zinc-950 p-3"
-                >
-                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? "bg-zinc-700" : "bg-brand-400"}`} />
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-white">{n.title}</div>
-                    {n.body && <div className="truncate text-xs text-zinc-500">{n.body}</div>}
-                    <div className="mt-0.5 text-[11px] text-zinc-600">{timeAgo(n.created_at)}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <MiniEmpty icon={<Bell className="h-5 w-5" />} text="No notifications yet." />
-          )}
-        </Widget>
-
-        {/* My projects */}
-        <Widget title="My projects" href="/my-projects">
-          {projects.length ? (
-            <ul className="flex flex-col gap-2">
-              {projects.slice(0, 4).map((p) => (
-                <li key={p.id}>
-                  <Link
-                    href={`/projects/${p.slug}`}
-                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-zinc-950 p-4 hover:border-brand-400/40"
-                  >
-                    <span className="text-sm font-medium text-white">{p.title}</span>
-                    <Badge variant="small">{p.status.replace("_", " ")}</Badge>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <MiniEmpty
-              icon={<FolderKanban className="h-5 w-5" />}
-              text="You haven't created any projects yet."
-            />
-          )}
-        </Widget>
-
-        {/* Upcoming events */}
-        <Widget title="Upcoming events" href="/calendar">
-          {events.length ? (
-            <ul className="flex flex-col gap-2">
-              {events.map((e) => (
-                <li key={e.id}>
-                  <Link
-                    href={`/events/${e.slug}`}
-                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950 p-4 hover:border-brand-400/40"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-500/15 text-brand-300">
-                      <CalendarDays className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-white">{e.title}</div>
-                      <div className="text-xs text-zinc-500">{formatDate(e.starts_at)}</div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <MiniEmpty icon={<CalendarDays className="h-5 w-5" />} text="No upcoming events." />
-          )}
-        </Widget>
-      </div>
-
-      {/* Achievements strip */}
-      {achievements.length > 0 && (
-        <Widget title="Club achievements" href="/achievements">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {achievements.slice(0, 4).map((a) => (
-              <div key={a.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-zinc-950 p-4">
-                <Award className="h-5 w-5 shrink-0 text-amber-300" />
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-white">{a.title}</div>
-                  {a.category && <div className="text-xs text-zinc-500">{a.category}</div>}
-                </div>
-              </div>
-            ))}
+          {/* My projects strip */}
+          <div className="mt-auto border-t border-white/[0.07] pt-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                My projects
+              </h3>
+              <Link href="/my-projects" className="text-xs text-zinc-500 hover:text-white">
+                All
+              </Link>
+            </div>
+            {projects.length ? (
+              <ul className="flex flex-col gap-2">
+                {projects.slice(0, 3).map((p) => (
+                  <li key={p.id}>
+                    <Link
+                      href={`/projects/${p.slug}`}
+                      className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-zinc-950/50 px-3.5 py-2.5 transition-colors hover:border-brand-400/40"
+                    >
+                      <span className="flex items-center gap-2.5 text-sm text-white">
+                        <FolderKanban className="h-4 w-4 text-brand-300" />
+                        {p.title}
+                      </span>
+                      <Badge variant="small">{p.status.replace("_", " ")}</Badge>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-zinc-600">Nothing yet — publish your first project.</p>
+            )}
           </div>
-        </Widget>
-      )}
-    </div>
-  );
-}
+        </Card>
 
-function Widget({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
-  return (
-    <Card className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">{title}</h2>
-        <Link href={href} className="flex items-center gap-1 text-xs text-brand-300 hover:text-brand-200">
-          View all <ArrowRight className="h-3 w-3" />
-        </Link>
+        {/* Right rail — timeline of events + notifications */}
+        <div className="flex flex-col gap-5">
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold tracking-tight text-white">Upcoming events</h2>
+              <Link href="/calendar" className="text-xs text-zinc-500 hover:text-white">
+                Calendar
+              </Link>
+            </div>
+            {events.length ? (
+              <ul className="relative flex flex-col gap-0">
+                {events.map((e, i) => (
+                  <li key={e.id} className="relative flex gap-4 pb-5 last:pb-0">
+                    {i < events.length - 1 && (
+                      <span className="absolute left-[15px] top-8 h-[calc(100%-24px)] w-px border-l border-dashed border-white/15" />
+                    )}
+                    <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-zinc-900 text-brand-300">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                    </span>
+                    <Link href={`/events/${e.slug}`} className="group min-w-0 flex-1 pt-1">
+                      <div className="truncate text-sm font-medium text-white group-hover:text-brand-200">
+                        {e.title}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-zinc-500">
+                        {formatDate(e.starts_at)}
+                        {e.venue ? ` · ${e.venue}` : ""}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="py-6 text-center text-sm text-zinc-500">No upcoming events.</p>
+            )}
+          </Card>
+
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-white">
+                Notifications
+                {unread > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-500 px-1.5 text-[10px] font-semibold text-white">
+                    {unread}
+                  </span>
+                )}
+              </h2>
+              <Link href="/notifications" className="text-xs text-zinc-500 hover:text-white">
+                All
+              </Link>
+            </div>
+            {notifications.length ? (
+              <ul className="flex flex-col gap-2.5">
+                {notifications.slice(0, 4).map((n) => (
+                  <li key={n.id} className="flex items-start gap-3">
+                    <span
+                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? "bg-zinc-700" : "bg-brand-400"}`}
+                    />
+                    <div className="min-w-0">
+                      <div className="truncate text-sm text-white">{n.title}</div>
+                      <div className="text-[11px] text-zinc-600">{timeAgo(n.created_at)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="flex items-center gap-2 py-4 text-sm text-zinc-500">
+                <Bell className="h-4 w-4 text-zinc-600" /> Nothing new yet.
+              </p>
+            )}
+          </Card>
+
+          {achievements.length > 0 && (
+            <Card className="p-6">
+              <h2 className="mb-4 text-sm font-semibold tracking-tight text-white">Club wins</h2>
+              <ul className="flex flex-col gap-2.5">
+                {achievements.slice(0, 3).map((a) => (
+                  <li key={a.id} className="flex items-center gap-3">
+                    <Award className="h-4 w-4 shrink-0 text-amber-300" />
+                    <span className="truncate text-sm text-zinc-300">{a.title}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+        </div>
       </div>
-      {children}
-    </Card>
-  );
-}
-
-function MiniEmpty({ icon, text }: { icon: React.ReactNode; text: string }) {
-  return (
-    <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-zinc-500">
-      <span className="text-zinc-600">{icon}</span>
-      {text}
     </div>
   );
 }
