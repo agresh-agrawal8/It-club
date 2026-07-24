@@ -36,6 +36,7 @@ export function Footer() {
             ["Gallery", "/gallery"],
             ["Achievements", "/achievements"],
             ["Search", "/search"],
+            ["Infinium Hackathon", "/hackathon"],
             ["Join the club", "/join"],
             ["Member login", "/login"],
           ].map(([label, href]) => (

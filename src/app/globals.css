@@ -19,10 +19,17 @@
   --color-brand-600: #7c3aed;
   --color-brand-700: #6d28d9;
 
-  /* Surfaces — zinc-based dark palette */
-  --color-surface-0: #09090b; /* zinc-950 — page background */
-  --color-surface-1: #18181b; /* zinc-900 — cards */
-  --color-surface-2: #27272a; /* zinc-800 — raised */
+  /* Secondary accent (spring green) — pairs with violet for data & highlights.
+     Used sparingly so violet stays the primary brand colour. */
+  --color-accent-300: #86efac;
+  --color-accent-400: #4ade80;
+  --color-accent-500: #22c55e;
+  --color-accent-600: #16a34a;
+
+  /* Surfaces — zinc-based dark palette, subtly warmed toward violet */
+  --color-surface-0: #0a0a0c; /* page background */
+  --color-surface-1: #161619; /* cards */
+  --color-surface-2: #242427; /* raised */
 
   /* Radii */
   --radius-2xl: 1rem;
@@ -199,8 +206,32 @@
     );
   }
 
+  /* Accent (green) ambient glow — for the hackathon module & data highlights */
+  .glow-accent {
+    background: radial-gradient(
+      600px circle at 50% 0%,
+      color-mix(in oklab, var(--color-accent-500) 20%, transparent),
+      transparent 70%
+    );
+  }
+
+  /* Dual-tone glow used behind hackathon hero — violet meeting green */
+  .glow-duo {
+    background:
+      radial-gradient(520px circle at 22% 0%, color-mix(in oklab, var(--color-brand-500) 22%, transparent), transparent 68%),
+      radial-gradient(520px circle at 82% 12%, color-mix(in oklab, var(--color-accent-500) 16%, transparent), transparent 66%);
+  }
+
   .text-gradient {
     background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Violet → green duotone text, for hackathon accent headings */
+  .text-duo {
+    background: linear-gradient(100deg, var(--color-brand-300) 0%, var(--color-accent-400) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
