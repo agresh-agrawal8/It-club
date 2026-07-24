@@ -10,10 +10,10 @@ import { ButtonLink } from "@/components/ui/button";
 
 const LINKS = [
   { href: "/hackathon", label: "Home", exact: true },
+  { href: "/hackathon/register", label: "Register" },
   { href: "/hackathon/problems", label: "Problems" },
   { href: "/hackathon/schedule", label: "Schedule" },
   { href: "/hackathon/leaderboard", label: "Leaderboard" },
-  { href: "/hackathon/blackout", label: "Blackout" },
 ];
 
 /** Infinium's own nav — Avinya theme, distinct violet→green identity. */
@@ -58,8 +58,8 @@ export function HackNav() {
           <Link href="/" className="flex items-center gap-1 text-xs text-zinc-500 hover:text-white">
             Avinya <ArrowUpRight className="h-3 w-3" />
           </Link>
-          <ButtonLink href="/hackathon/dashboard" variant="brand" size="sm" className="rounded-full">
-            Dashboard
+          <ButtonLink href="/hackathon/login" variant="brand" size="sm" className="rounded-full">
+            Team sign in
           </ButtonLink>
         </div>
 
@@ -86,13 +86,13 @@ export function HackNav() {
               </Link>
             ))}
             <ButtonLink
-              href="/hackathon/dashboard"
+              href="/hackathon/login"
               variant="brand"
               size="sm"
               className="mt-2 rounded-full"
               onClick={() => setOpen(false)}
             >
-              Open dashboard
+              Team sign in
             </ButtonLink>
           </Container>
         </div>

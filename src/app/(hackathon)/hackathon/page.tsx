@@ -70,8 +70,8 @@ export default async function HackathonHome() {
           <Countdown target={startsAt} label="Kicks off in" className="animate-fade-up items-center" />
 
           <div className="flex animate-fade-up flex-col gap-3 sm:flex-row">
-            <ButtonLink href="/hackathon/dashboard" variant="brand" size="lg" className="rounded-full">
-              Enter the arena <ArrowUpRight className="h-4 w-4" />
+            <ButtonLink href="/hackathon/register" variant="brand" size="lg" className="rounded-full">
+              Register your team <ArrowUpRight className="h-4 w-4" />
             </ButtonLink>
             <ButtonLink href="/hackathon/problems" variant="secondary" size="lg" className="rounded-full">
               View problem statements
@@ -232,8 +232,8 @@ export default async function HackathonHome() {
               <div className="flex items-center gap-2 text-sm text-zinc-500">
                 <MapPin className="h-4 w-4" /> {event.venue || "Emerald Heights International School, Indore"}
               </div>
-              <ButtonLink href="/hackathon/dashboard" variant="brand" size="lg" className="rounded-full">
-                Enter the arena <ArrowUpRight className="h-4 w-4" />
+              <ButtonLink href="/hackathon/register" variant="brand" size="lg" className="rounded-full">
+                Register your team <ArrowUpRight className="h-4 w-4" />
               </ButtonLink>
             </div>
           </div>
