@@ -16,19 +16,12 @@ const FIELDS = [
   { name: "docs_url", label: "Documentation", icon: FileText, placeholder: "README / docs link" },
 ];
 
-export function TeamSubmissionForm({
-  teamId,
-  submission,
-}: {
-  teamId: string;
-  submission: any;
-}) {
+export function TeamSubmissionForm({ submission }: { submission: any }) {
   const [state, formAction, pending] = useActionState(saveTeamSubmissionAction, undefined);
 
+  // No team id is sent: the server resolves it from the signed session cookie.
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <input type="hidden" name="team_id" value={teamId} />
-
       <div className="grid gap-4 sm:grid-cols-2">
         {FIELDS.map(({ name, label, icon: Icon, placeholder }) => (
           <label key={name} className="flex flex-col gap-1.5">

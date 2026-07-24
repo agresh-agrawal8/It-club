@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient, hasServiceRole } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import {
   TEAM_COOKIE,
+  TEAM_COOKIE_OPTIONS,
+  createTeamSessionToken,
+  requireTeamSession,
   hashPassword,
-  verifyPassword,
   generatePassword,
 } from "./team-auth";
 
@@ -36,6 +38,12 @@ async function registerTeamWithAdminClient(
   tagline: string,
   members: TeamMemberInput[],
 ) {
+  if (!hasServiceRole()) {
+    return {
+      error:
+        "Registration is temporarily unavailable. Please tell the core team (server configuration issue).",
+    };
+  }
   const supabase = createAdminClient();
 
   const { count, error: countError } = await supabase
@@ -228,12 +236,7 @@ export async function teamLoginAction(_prev: unknown, formData: FormData) {
   }
 
   const store = await cookies();
-  store.set(TEAM_COOKIE, res.team_id!, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/hackathon",
-    maxAge: 60 * 60 * 24 * 7,
-  });
+  store.set(TEAM_COOKIE, createTeamSessionToken(res.team_id!), TEAM_COOKIE_OPTIONS);
   redirect("/hackathon/dashboard");
 }
 
@@ -321,12 +324,20 @@ export async function assignProblemAction(formData: FormData) {
 
 /* ─────────────────────────── SUBMISSION ─────────────────────────── */
 
-export async function saveTeamSubmissionAction(_prev: unknown, formData: FormData) {
-  const teamId = String(formData.get("team_id") ?? "");
-  if (!teamId) return { error: "Missing team." };
+export async function saveTeamSubmissionAction(
+  _prev: unknown,
+  formData: FormData,
+): Promise<{ error?: string; success?: string }> {
+  // The team id comes from the signed session cookie, never from the form —
+  // otherwise any visitor could overwrite another team's submission.
+  const session = await requireTeamSession();
+  if ("error" in session) return session;
+  const teamId = session.team.id;
   const finalize = formData.get("submit") === "true";
 
-  const supabase = await createClient();
+  // Authorisation happened above against the signed cookie; the RPC itself is
+  // granted to service_role only so it cannot be called directly by anon.
+  const supabase = createAdminClient();
   const { error } = await supabase.rpc("hack_save_submission", {
     p_team_id: teamId,
     p_github: String(formData.get("github_url") ?? ""),
@@ -344,14 +355,15 @@ export async function saveTeamSubmissionAction(_prev: unknown, formData: FormDat
 }
 
 export async function updateProgressAction(formData: FormData) {
-  const teamId = String(formData.get("team_id") ?? "");
-  const progress = Number(formData.get("progress") ?? 0);
-  if (!teamId) return;
+  const session = await requireTeamSession();
+  if ("error" in session) return;
+  const progress = Math.max(0, Math.min(100, Number(formData.get("progress") ?? 0) || 0));
+
   const supabase = createAdminClient();
-  await supabase
-    .from("hack_teams")
-    .update({ progress: Math.max(0, Math.min(100, progress)) })
-    .eq("id", teamId);
+  await supabase.rpc("hack_set_progress", {
+    p_team_id: session.team.id,
+    p_progress: progress,
+  });
   revalidatePath("/hackathon/dashboard");
 }
 

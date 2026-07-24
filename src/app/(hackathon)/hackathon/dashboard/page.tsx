@@ -144,7 +144,7 @@ export default async function TeamDashboard() {
                 {data.submission?.status === "submitted" ? "Submitted" : "Draft"}
               </Badge>
             </div>
-            <TeamSubmissionForm teamId={team.id} submission={data.submission} />
+            <TeamSubmissionForm submission={data.submission} />
           </Card>
         </div>
 

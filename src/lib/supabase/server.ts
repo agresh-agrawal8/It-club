@@ -35,11 +35,27 @@ export async function createClient() {
   );
 }
 
+/** True when the service-role key is available in this environment. */
+export function hasServiceRole() {
+  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL);
+}
+
 /**
- * Service-role client — bypasses RLS. ONLY use in trusted server code
- * (e.g. admin provisioning of member accounts). Never expose to the client.
+ * Service-role client — bypasses RLS. ONLY use in trusted server code, and
+ * only *after* the caller has been authorised (requireAdmin, or a verified
+ * session). Never expose to the client.
+ *
+ * Throws when the key is absent: a client built on `undefined` silently sends
+ * `Bearer undefined` and every write fails with an opaque 401, which is how
+ * missing configuration used to surface as mystery "nothing saved" bugs.
  */
 export function createAdminClient() {
+  if (!hasServiceRole()) {
+    throw new Error(
+      "SUPABASE_SERVICE_ROLE_KEY is not set — privileged server actions cannot run. " +
+        "Add it to .env.local and to the deployment's environment variables.",
+    );
+  }
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,

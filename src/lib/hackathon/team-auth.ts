@@ -1,7 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { createHash, randomBytes } from "crypto";
-import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Infinium team authentication.
@@ -12,6 +12,66 @@ import { createAdminClient, createClient } from "@/lib/supabase/server";
  */
 
 export const TEAM_COOKIE = "infinium_team";
+
+/** Sessions expire after a week; re-login is cheap during a 2-day event. */
+const SESSION_MAX_AGE_S = 60 * 60 * 24 * 7;
+
+/**
+ * Secret used to sign session cookies. `EVENT_SESSION_SECRET` is preferred;
+ * we fall back to the service-role key so existing deployments keep working
+ * without new configuration. Both are server-only and never sent to a client.
+ */
+function sessionSecret() {
+  const secret =
+    process.env.EVENT_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!secret) {
+    throw new Error(
+      "Session signing secret missing: set EVENT_SESSION_SECRET (or SUPABASE_SERVICE_ROLE_KEY).",
+    );
+  }
+  return secret;
+}
+
+function sign(payload: string) {
+  return createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
+}
+
+/**
+ * Mint a tamper-proof session value: `<teamId>.<issuedAt>.<hmac>`.
+ *
+ * The team id alone is NOT a credential — `hack_teams` is world-readable, so
+ * anyone can list team ids. Signing binds the cookie to a server secret so it
+ * cannot be forged by simply crafting a request with someone else's id.
+ */
+export function createTeamSessionToken(teamId: string) {
+  const payload = `${teamId}.${Date.now()}`;
+  return `${payload}.${sign(payload)}`;
+}
+
+/** Verify a session cookie and return the team id, or null if invalid/expired. */
+export function readTeamSessionToken(token: string | undefined): string | null {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null; // legacy bare-uuid cookies are rejected
+  const [teamId, issuedAt, signature] = parts;
+
+  const expected = Buffer.from(sign(`${teamId}.${issuedAt}`));
+  const given = Buffer.from(signature);
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+
+  const age = (Date.now() - Number(issuedAt)) / 1000;
+  if (!Number.isFinite(age) || age < 0 || age > SESSION_MAX_AGE_S) return null;
+
+  return teamId;
+}
+
+export const TEAM_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+  path: "/hackathon",
+  maxAge: SESSION_MAX_AGE_S,
+} as const;
 
 /** Salted SHA-256 — stored as "salt:hash". */
 export function hashPassword(password: string, salt?: string) {
@@ -53,7 +113,7 @@ export interface TeamSession {
 export async function getTeamSession(): Promise<TeamSession | null> {
   try {
     const store = await cookies();
-    const id = store.get(TEAM_COOKIE)?.value;
+    const id = readTeamSessionToken(store.get(TEAM_COOKIE)?.value);
     if (!id) return null;
     const supabase = await createClient();
     const { data } = await supabase
@@ -68,9 +128,24 @@ export async function getTeamSession(): Promise<TeamSession | null> {
   }
 }
 
+/**
+ * The signed-in team, or an error result. Every team-owned write must call
+ * this and use the returned id — never a team id taken from the request body.
+ */
+export async function requireTeamSession(): Promise<
+  { team: TeamSession } | { error: string }
+> {
+  const team = await getTeamSession();
+  if (!team) return { error: "Your session has expired. Please sign in again." };
+  return { team };
+}
+
 /** Full team record for the dashboard: members, problem, submission, cards. */
 export async function getTeamDashboardData(teamId: string) {
-  const supabase = createAdminClient();
+  // All hack_* tables are public-read, so the anon client is enough here.
+  // Keeping the service-role key off this path means the dashboard still
+  // renders if that key is ever missing from the deployment.
+  const supabase = await createClient();
   const [members, problem, submission, cards, scores, allCards] = await Promise.all([
     supabase
       .from("hack_participants")
