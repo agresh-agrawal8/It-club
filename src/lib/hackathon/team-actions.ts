@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import {
   TEAM_COOKIE,
   hashPassword,
@@ -67,76 +68,29 @@ export async function registerTeamAction(_prev: unknown, formData: FormData) {
   if (new Set(keys).size !== keys.length)
     return { error: "The same student is listed twice in this team." };
 
-  const supabase = createAdminClient();
+  // All remaining validation + inserts happen inside one SECURITY DEFINER
+  // transaction, so capacity/duplicate checks cannot race and the flow works
+  // without the service-role key being configured.
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("hack_register_team", {
+    p_team_name: teamName,
+    p_school: school,
+    p_tagline: tagline,
+    p_members: members.map((m) => ({
+      name: m.name,
+      class_section: m.class_section,
+      role: m.role,
+      quiz: m.quiz,
+    })),
+  });
 
-  // Capacity
-  const { count } = await supabase
-    .from("hack_teams")
-    .select("*", { count: "exact", head: true })
-    .neq("reg_status", "rejected");
-  if ((count ?? 0) >= MAX_TEAMS)
-    return { error: `Registration is full — the maximum of ${MAX_TEAMS} teams has been reached.` };
-
-  // Team name uniqueness
-  const { data: nameClash } = await supabase
-    .from("hack_teams")
-    .select("id")
-    .ilike("name", teamName)
-    .maybeSingle();
-  if (nameClash) return { error: "A team with that name already exists. Pick another." };
-
-  // ── No student may be on two teams ──
-  const { data: existing } = await supabase
-    .from("hack_participants")
-    .select("name,class_section")
-    .not("team_id", "is", null);
-  const taken = new Set(
-    (existing ?? []).map(
-      (p: { name: string; class_section: string | null }) =>
-        `${p.name.toLowerCase()}|${(p.class_section ?? "").toLowerCase()}`,
-    ),
-  );
-  const clash = members.find((m) =>
-    taken.has(`${m.name.toLowerCase()}|${m.class_section.toLowerCase()}`),
-  );
-  if (clash)
-    return {
-      error: `${clash.name} (${clash.class_section}) is already registered with another team. Each student can only join one team.`,
-    };
-
-  // Create the team (pending approval)
-  const { data: team, error: teamErr } = await supabase
-    .from("hack_teams")
-    .insert({
-      name: teamName,
-      tagline: tagline || null,
-      school: school || null,
-      reg_status: "pending",
-      status: "forming",
-    })
-    .select("id")
-    .single();
-  if (teamErr || !team) return { error: teamErr?.message ?? "Could not create the team." };
-
-  const rows = members.map((m) => ({
-    name: m.name,
-    class_section: m.class_section,
-    member_role: m.role,
-    is_quiz_rep: m.quiz,
-    role: "student" as const,
-    team_id: team.id,
-  }));
-  const { error: memErr } = await supabase.from("hack_participants").insert(rows);
-  if (memErr) {
-    // Roll back the team so a failed member insert never leaves an orphan.
-    await supabase.from("hack_teams").delete().eq("id", team.id);
-    if (memErr.code === "23505")
-      return { error: "One of these students is already registered with another team." };
-    return { error: memErr.message };
+  if (error) {
+    // Postgres RAISE messages arrive prefixed; show just the human sentence.
+    return { error: error.message.replace(/^.*?:\s*/, "") || "Could not register the team." };
   }
 
   revalidatePath("/hackathon/register");
-  revalidatePath("/hackathon/dashboard");
+  revalidatePath("/hackathon/manage");
   return {
     success:
       "Registration received! The core team will review it and issue your Team ID and password.",
@@ -150,20 +104,28 @@ export async function teamLoginAction(_prev: unknown, formData: FormData) {
   const password = String(formData.get("password") ?? "");
   if (!code || !password) return { error: "Enter your Team ID and password." };
 
-  const supabase = createAdminClient();
-  const { data: team } = await supabase
-    .from("hack_teams")
-    .select("id,password_hash,reg_status")
-    .eq("team_code", code)
-    .maybeSingle();
+  // The password hash never leaves the database: we fetch only the salt,
+  // hash the attempt with it, and let Postgres compare.
+  const supabase = await createClient();
+  const { data: salt } = await supabase.rpc("hack_team_salt", { p_code: code });
+  if (!salt) return { error: "Invalid Team ID or password." };
 
-  if (!team || !verifyPassword(password, team.password_hash))
-    return { error: "Invalid Team ID or password." };
-  if (team.reg_status !== "approved")
-    return { error: "Your team is still awaiting approval from the core team." };
+  const attempt = hashPassword(password, String(salt));
+  const { data: result, error } = await supabase.rpc("hack_team_login", {
+    p_code: code,
+    p_password_hash: attempt,
+  });
+  if (error) return { error: "Could not sign in right now. Please try again." };
+
+  const res = result as { ok: boolean; reason?: string; team_id?: string } | null;
+  if (!res?.ok) {
+    return res?.reason === "pending"
+      ? { error: "Your team is still awaiting approval from the core team." }
+      : { error: "Invalid Team ID or password." };
+  }
 
   const store = await cookies();
-  store.set(TEAM_COOKIE, team.id, {
+  store.set(TEAM_COOKIE, res.team_id!, {
     httpOnly: true,
     sameSite: "lax",
     path: "/hackathon",
@@ -182,6 +144,7 @@ export async function teamLogoutAction() {
 
 /** Approve a registration: assign team number, Team ID and password. */
 export async function approveTeamAction(formData: FormData) {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const supabase = createAdminClient();
@@ -216,6 +179,7 @@ export async function approveTeamAction(formData: FormData) {
 }
 
 export async function rejectTeamAction(formData: FormData) {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const supabase = createAdminClient();
@@ -225,6 +189,7 @@ export async function rejectTeamAction(formData: FormData) {
 
 /** Regenerate a team's password (if students lose it). */
 export async function resetTeamPasswordAction(formData: FormData) {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const password = generatePassword();
@@ -238,6 +203,7 @@ export async function resetTeamPasswordAction(formData: FormData) {
 
 /** Assign a unique problem envelope to a team. */
 export async function assignProblemAction(formData: FormData) {
+  await requireAdmin();
   const teamId = String(formData.get("team_id") ?? "");
   const problemId = String(formData.get("problem_id") ?? "");
   if (!teamId) return;
@@ -257,28 +223,17 @@ export async function saveTeamSubmissionAction(_prev: unknown, formData: FormDat
   if (!teamId) return { error: "Missing team." };
   const finalize = formData.get("submit") === "true";
 
-  const supabase = createAdminClient();
-  const row = {
-    team_id: teamId,
-    github_url: String(formData.get("github_url") ?? "") || null,
-    demo_url: String(formData.get("demo_url") ?? "") || null,
-    presentation_url: String(formData.get("presentation_url") ?? "") || null,
-    docs_url: String(formData.get("docs_url") ?? "") || null,
-    notes: String(formData.get("notes") ?? "") || null,
-    status: finalize ? ("submitted" as const) : ("draft" as const),
-    submitted_at: finalize ? new Date().toISOString() : null,
-  };
-  const { error } = await supabase.from("hack_submissions").upsert(row, { onConflict: "team_id" });
-  if (error) return { error: error.message };
-
-  await supabase
-    .from("hack_teams")
-    .update({
-      github_url: row.github_url,
-      demo_url: row.demo_url,
-      ...(finalize ? { status: "submitted", progress: 100 } : {}),
-    })
-    .eq("id", teamId);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("hack_save_submission", {
+    p_team_id: teamId,
+    p_github: String(formData.get("github_url") ?? ""),
+    p_demo: String(formData.get("demo_url") ?? ""),
+    p_deck: String(formData.get("presentation_url") ?? ""),
+    p_docs: String(formData.get("docs_url") ?? ""),
+    p_notes: String(formData.get("notes") ?? ""),
+    p_finalize: finalize,
+  });
+  if (error) return { error: error.message.replace(/^.*?:\s*/, "") };
 
   revalidatePath("/hackathon/dashboard");
   revalidatePath("/hackathon/judge");
@@ -301,6 +256,7 @@ export async function updateProgressAction(formData: FormData) {
 
 /** Official marking sheet: A + B + C + D − penalties (total computed in DB). */
 export async function saveOfficialScoreAction(_prev: unknown, formData: FormData) {
+  await requireAdmin();
   const teamId = String(formData.get("team_id") ?? "");
   const judgeName = String(formData.get("judge_name") ?? "").trim();
   if (!teamId) return { error: "Missing team." };
@@ -350,6 +306,7 @@ export async function saveOfficialScoreAction(_prev: unknown, formData: FormData
 
 /** Award / revoke an achievement card (feeds Section A). */
 export async function toggleTeamCardAction(formData: FormData) {
+  await requireAdmin();
   const teamId = String(formData.get("team_id") ?? "");
   const cardId = String(formData.get("card_id") ?? "");
   const has = formData.get("has") === "true";
