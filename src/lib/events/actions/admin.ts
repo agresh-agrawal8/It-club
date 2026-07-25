@@ -1,9 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getEvent } from "@/lib/events/engine";
+import { getEvent, EVENT_TAG } from "@/lib/events/engine";
 import { requireEventAdmin } from "@/lib/events/auth";
 
 /**
@@ -24,6 +24,19 @@ async function authorise(slug: string) {
 
 function base(slug: string) {
   return `/events/hub/${slug}`;
+}
+
+/**
+ * Public event reads are cached across requests (engine.ts / queries.ts), so
+ * every organiser write must drop the tag or the change would not be visible
+ * until the cache expired.
+ */
+function revalidateEvent(slug: string, ...extra: string[]) {
+  revalidateTag(EVENT_TAG);
+  revalidatePath("/events/hub");
+  revalidatePath(base(slug));
+  revalidatePath(`${base(slug)}/admin`);
+  for (const p of extra) revalidatePath(p);
 }
 
 /* ── Announcements ─────────────────────────────────────────────── */
@@ -58,8 +71,7 @@ export async function postEventAnnouncementAction(_prev: unknown, formData: Form
   });
   if (error) return { error: error.message };
 
-  revalidatePath(base(slug));
-  revalidatePath(`${base(slug)}/admin`);
+  revalidateEvent(slug, `${base(slug)}/dashboard`);
   return { success: "Announcement posted." };
 }
 
@@ -73,8 +85,7 @@ export async function deleteEventAnnouncementAction(formData: FormData) {
 
   const supabase = await createClient();
   await supabase.from("ev_announcements").delete().eq("id", id).eq("event_id", auth.event.id);
-  revalidatePath(`${base(slug)}/admin`);
-  revalidatePath(base(slug));
+  revalidateEvent(slug, `${base(slug)}/dashboard`);
 }
 
 /* ── Mission release ───────────────────────────────────────────── */
@@ -97,8 +108,7 @@ export async function setMissionStatusAction(formData: FormData) {
     .eq("id", id)
     .eq("event_id", auth.event.id);
 
-  revalidatePath(`${base(slug)}/admin`);
-  revalidatePath(`${base(slug)}/missions`);
+  revalidateEvent(slug, `${base(slug)}/missions`, `${base(slug)}/dashboard`);
 }
 
 /* ── Event status ──────────────────────────────────────────────── */
@@ -124,9 +134,7 @@ export async function setEventStatusAction(formData: FormData) {
   const supabase = await createClient();
   await supabase.from("ev_events").update({ status }).eq("id", auth.event.id);
 
-  revalidatePath(`${base(slug)}/admin`);
-  revalidatePath(base(slug));
-  revalidatePath("/events/hub");
+  revalidateEvent(slug, `${base(slug)}/missions`, `${base(slug)}/dashboard`);
 }
 
 /* ── Registration review ───────────────────────────────────────── */
@@ -151,5 +159,5 @@ export async function setParticipantStatusAction(formData: FormData) {
     .eq("id", id)
     .eq("event_id", auth.event.id);
 
-  revalidatePath(`${base(slug)}/admin`);
+  revalidateEvent(slug);
 }

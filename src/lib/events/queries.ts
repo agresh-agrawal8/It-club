@@ -1,7 +1,21 @@
 import "server-only";
 import { cache } from "react";
-import { createAdminClient, createClient, hasServiceRole } from "@/lib/supabase/server";
-import { safeEventRead as safe } from "./engine";
+import { unstable_cache } from "next/cache";
+import {
+  createAdminClient,
+  createClient,
+  createPublicClient,
+  hasServiceRole,
+} from "@/lib/supabase/server";
+import { safeEventRead as safe, EVENT_TAG } from "./engine";
+
+/**
+ * Shared cache wrapper for PUBLIC event reads, keyed per event.
+ * Participant- and staff-scoped reads below deliberately do not use it.
+ */
+function publicRead<T>(key: string, eventId: string, fn: () => Promise<T>, revalidate = 60) {
+  return unstable_cache(fn, [key, eventId], { tags: [EVENT_TAG], revalidate })();
+}
 import type {
   Announcement,
   Badge,
@@ -20,27 +34,33 @@ import type {
  */
 
 export const getSchedule = cache(async (eventId: string): Promise<ScheduleItem[]> =>
-  safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("ev_schedule")
-      .select("*")
-      .eq("event_id", eventId)
-      .order("starts_at", { ascending: true });
-    return (data ?? []) as ScheduleItem[];
-  }, []),
+  publicRead("ev-schedule", eventId, async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("ev_schedule")
+        .select("*")
+        .eq("event_id", eventId)
+        .order("starts_at", { ascending: true });
+      return (data ?? []) as ScheduleItem[];
+    }, [] as ScheduleItem[]),
+    300,
+  ),
 );
 
 export const getMissionCategories = cache(async (eventId: string): Promise<MissionCategory[]> =>
-  safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("ev_mission_categories")
-      .select("*")
-      .eq("event_id", eventId)
-      .order("position", { ascending: true });
-    return (data ?? []) as MissionCategory[];
-  }, []),
+  publicRead("ev-categories", eventId, async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("ev_mission_categories")
+        .select("*")
+        .eq("event_id", eventId)
+        .order("position", { ascending: true });
+      return (data ?? []) as MissionCategory[];
+    }, [] as MissionCategory[]),
+    300,
+  ),
 );
 
 /**
@@ -111,29 +131,36 @@ export async function getMissionDeps(
 }
 
 export const getBadges = cache(async (eventId: string): Promise<Badge[]> =>
-  safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("ev_badges")
-      .select("*")
-      .eq("event_id", eventId)
-      .order("position", { ascending: true });
-    return (data ?? []) as Badge[];
-  }, []),
+  publicRead("ev-badges", eventId, async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("ev_badges")
+        .select("*")
+        .eq("event_id", eventId)
+        .order("position", { ascending: true });
+      return (data ?? []) as Badge[];
+    }, [] as Badge[]),
+    300,
+  ),
 );
 
-export const getAnnouncements = cache(async (eventId: string, limit = 10): Promise<Announcement[]> =>
-  safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("ev_announcements")
-      .select("*")
-      .eq("event_id", eventId)
-      .order("pinned", { ascending: false })
-      .order("published_at", { ascending: false })
-      .limit(limit);
-    return (data ?? []) as Announcement[];
-  }, []),
+export const getAnnouncements = cache(
+  async (eventId: string, limit = 10): Promise<Announcement[]> =>
+    publicRead(`ev-announcements-${limit}`, eventId, async () =>
+      safe(async () => {
+        const supabase = createPublicClient();
+        const { data } = await supabase
+          .from("ev_announcements")
+          .select("*")
+          .eq("event_id", eventId)
+          .order("pinned", { ascending: false })
+          .order("published_at", { ascending: false })
+          .limit(limit);
+        return (data ?? []) as Announcement[];
+      }, [] as Announcement[]),
+      30,
+    ),
 );
 
 export interface TeamOverview {
@@ -199,15 +226,19 @@ export const getLeaderboard = cache(
     subject: "team" | "participant" = "team",
     limit = 50,
   ): Promise<LeaderboardRow[]> =>
-    safe(async () => {
-      const supabase = await createClient();
-      const { data } = await supabase
-        .from("ev_leaderboard_public")
-        .select("*")
-        .eq("event_id", eventId)
-        .eq("subject_kind", subject)
-        .order("rank", { ascending: true })
-        .limit(limit);
-      return (data ?? []) as LeaderboardRow[];
-    }, []),
+    // Short window: standings are the thing people refresh for.
+    publicRead(`ev-leaderboard-${subject}-${limit}`, eventId, async () =>
+      safe(async () => {
+        const supabase = createPublicClient();
+        const { data } = await supabase
+          .from("ev_leaderboard_public")
+          .select("*")
+          .eq("event_id", eventId)
+          .eq("subject_kind", subject)
+          .order("rank", { ascending: true })
+          .limit(limit);
+        return (data ?? []) as LeaderboardRow[];
+      }, [] as LeaderboardRow[]),
+      15,
+    ),
 );

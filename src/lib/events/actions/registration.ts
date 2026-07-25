@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getEvent, resolveTheme } from "@/lib/events/engine";
+import { getEvent, resolveTheme, EVENT_TAG } from "@/lib/events/engine";
 import {
   eventCookieName,
   mintSessionToken,
@@ -105,7 +105,11 @@ export async function registerEventTeamAction(
   const result = data as { login_code?: string } | null;
   if (!result?.login_code) return { error: "Could not issue your credentials. Tell the organisers." };
 
+  // Drops the cached registration count and team lists so the new team and the
+  // updated "places claimed" figure are visible on the next request.
+  revalidateTag(EVENT_TAG);
   revalidatePath(`/events/hub/${slug}`);
+  revalidatePath(`/events/hub/${slug}/register`);
   revalidatePath(`/events/hub/${slug}/admin`);
   return {
     success: "Your team is registered. Save these credentials — you need them to sign in.",

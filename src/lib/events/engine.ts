@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { unstable_cache } from "next/cache";
+import { createPublicClient } from "@/lib/supabase/server";
 import type {
   EventCapability,
   EventRecord,
@@ -31,6 +32,22 @@ async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   }
 }
 
+/** Invalidated by every organiser write — see lib/events/actions/admin.ts. */
+export const EVENT_TAG = "event-data";
+
+/**
+ * Wrap a PUBLIC event read so it is deduped per render and shared across
+ * requests. Uses the cookieless client, because `cookies()` inside a cache
+ * scope throws — and because a value shared between visitors must not depend
+ * on any one visitor's session.
+ *
+ * Only for tables whose RLS grants public read. Anything participant- or
+ * staff-scoped must stay on the request-bound client.
+ */
+function publicRead<T>(key: string, fn: () => Promise<T>, revalidate = 60) {
+  return cache(unstable_cache(fn, [key], { tags: [EVENT_TAG], revalidate }));
+}
+
 export const DEFAULT_SETTINGS: EventSettings = {
   registration_mode: "closed",
   teams_enabled: true,
@@ -56,51 +73,72 @@ const DEFAULT_THEME: EventTheme = {
 };
 
 /** All events visible on the hub, newest first. */
-export const listEvents = cache(async (): Promise<EventRecord[]> =>
-  safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("ev_events")
-      .select("*")
-      .neq("status", "draft")
-      .neq("status", "archived")
-      .order("starts_at", { ascending: true, nullsFirst: false });
-    return (data ?? []) as EventRecord[];
-  }, []),
+export const listEvents = publicRead<EventRecord[]>(
+  "ev-events-list",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("ev_events")
+        .select("*")
+        .neq("status", "draft")
+        .neq("status", "archived")
+        .order("starts_at", { ascending: true, nullsFirst: false });
+      return (data ?? []) as EventRecord[];
+    }, []),
+  120,
 );
 
-/** One event by slug, or null. RLS decides whether the caller may see it. */
-export const getEvent = cache(async (slug: string): Promise<EventRecord | null> =>
-  safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("ev_events")
-      .select("*")
-      .eq("slug", slug)
-      .maybeSingle();
-    return (data as EventRecord) ?? null;
-  }, null),
+/**
+ * One event by slug, or null.
+ *
+ * Cached per slug. Only publicly visible events are readable here (the RLS
+ * policy on ev_events restricts the anon role to visibility='public' and a
+ * non-draft status), so nothing unpublished can leak through the shared cache.
+ */
+export const getEvent = cache(
+  async (slug: string): Promise<EventRecord | null> =>
+    unstable_cache(
+      async () =>
+        safe(async () => {
+          const supabase = createPublicClient();
+          const { data } = await supabase
+            .from("ev_events")
+            .select("*")
+            .eq("slug", slug)
+            .maybeSingle();
+          return (data as EventRecord) ?? null;
+        }, null),
+      ["ev-event", slug],
+      { tags: [EVENT_TAG], revalidate: 120 },
+    )(),
 );
 
 /**
  * Capability flags, merged over defaults so a missing row is never a crash.
  * Values are stored as jsonb, so they arrive already parsed.
  */
-export const getEventSettings = cache(async (eventId: string): Promise<EventSettings> =>
-  safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("ev_event_settings")
-      .select("key,value")
-      .eq("event_id", eventId);
+export const getEventSettings = cache(
+  async (eventId: string): Promise<EventSettings> =>
+    unstable_cache(
+      async () =>
+        safe(async () => {
+          const supabase = createPublicClient();
+          const { data } = await supabase
+            .from("ev_event_settings")
+            .select("key,value")
+            .eq("event_id", eventId);
 
-    const merged = { ...DEFAULT_SETTINGS } as Record<string, unknown>;
-    for (const row of (data ?? []) as { key: string; value: unknown }[]) {
-      if (row.key.startsWith("private.")) continue; // staff-only, never in page props
-      merged[row.key] = row.value;
-    }
-    return merged as unknown as EventSettings;
-  }, DEFAULT_SETTINGS),
+          const merged = { ...DEFAULT_SETTINGS } as Record<string, unknown>;
+          for (const row of (data ?? []) as { key: string; value: unknown }[]) {
+            if (row.key.startsWith("private.")) continue; // staff-only, never in page props
+            merged[row.key] = row.value;
+          }
+          return merged as unknown as EventSettings;
+        }, DEFAULT_SETTINGS),
+      ["ev-settings", eventId],
+      { tags: [EVENT_TAG], revalidate: 120 },
+    )(),
 );
 
 /** Theme merged over defaults. */
@@ -127,17 +165,27 @@ export function can(settings: EventSettings, capability: EventCapability): boole
   return Boolean(settings[capability]);
 }
 
-/** How many participants are registered (for capacity rules). */
-export const countRegistered = cache(async (eventId: string): Promise<number> =>
-  safe(async () => {
-    const supabase = await createClient();
-    const { count } = await supabase
-      .from("ev_participants")
-      .select("*", { count: "exact", head: true })
-      .eq("event_id", eventId)
-      .not("status", "in", "(rejected,withdrawn)");
-    return count ?? 0;
-  }, 0),
+/**
+ * How many participants are registered (for capacity rules).
+ *
+ * Deliberately short-lived: this gates registration, so a stale count could
+ * let a team register into a full event.
+ */
+export const countRegistered = cache(
+  async (eventId: string): Promise<number> =>
+    unstable_cache(
+      async () =>
+        safe(async () => {
+          // Via RPC, not a table read: ev_participants is not public-read (it
+          // joins to PII), so counting rows through the anon client always
+          // returned 0. ev_registered_count exposes only the aggregate.
+          const supabase = createPublicClient();
+          const { data } = await supabase.rpc("ev_registered_count", { p_event_id: eventId });
+          return Number(data ?? 0);
+        }, 0),
+      ["ev-registered-count", eventId],
+      { tags: [EVENT_TAG], revalidate: 15 },
+    )(),
 );
 
 export { safe as safeEventRead };
