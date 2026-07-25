@@ -64,6 +64,9 @@ export default async function ManagePage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <ButtonLink href="/hackathon/admin" variant="ghost" size="sm" className="rounded-full">
+            ← Console
+          </ButtonLink>
           <ButtonLink href="/hackathon/judge" variant="secondary" size="sm" className="rounded-full">
             <Gavel className="h-4 w-4" /> Judging
           </ButtonLink>

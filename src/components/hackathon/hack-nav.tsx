@@ -18,7 +18,7 @@ const LINKS = [
 
 /** Core-team-only panels, appended to the nav when the viewer is an admin. */
 const ADMIN_LINKS = [
-  { href: "/hackathon/manage", label: "Manage", icon: Settings2 },
+  { href: "/hackathon/admin", label: "Admin", icon: Settings2 },
   { href: "/hackathon/judge", label: "Judging", icon: Gavel },
 ];
 
