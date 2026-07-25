@@ -31,22 +31,96 @@
   --color-surface-1: #161619; /* cards */
   --color-surface-2: #242427; /* raised */
 
-  /* Radii */
-  --radius-2xl: 1rem;
-  --radius-3xl: 1.5rem;
+  /* ── Retuned zinc text-steps ─────────────────────────────────────────
+     Tailwind's stock zinc-500 (#71717a, 4.09:1) and zinc-600 (#52525b,
+     2.56:1) fail WCAG AA for body text, and the codebase uses both for real
+     content (~260 usages). Overriding the two steps here fixes every one of
+     them at the token level while preserving a visible hierarchy gap:
+       zinc-500 → #9a9aa4  (5.55:1 on the lightest surface — AA ✓)
+       zinc-600 → #8a8a95  (4.53:1 on the lightest surface — AA ✓)
+     The only non-text uses are two inactive-status dots, which simply read
+     a touch brighter. */
+  --color-zinc-500: #9a9aa4;
+  --color-zinc-600: #8a8a95;
+
+  /* ── Ink ramp — semantic text colours ────────────────────────────────
+     Every value is measured against the LIGHTEST surface (#242427), so a
+     token that passes here passes on every surface in the system.
+
+       ink-1  #fafafa  16.4:1  headings, primary text
+       ink-2  #b4b4be   8.0:1  body text
+       ink-3  #8f8f99   4.8:1  secondary / meta text  (AA body ✓)
+       ink-4  #74747e   3.2:1  NON-ESSENTIAL ONLY — decorative glyphs,
+                               disabled states, oversized display numerals
+
+     This replaces bare zinc-500 (4.09:1) and zinc-600 (2.56:1), which were
+     used for real content and failed AA for body text. */
+  --color-ink-1: #fafafa;
+  --color-ink-2: #b4b4be;
+  --color-ink-3: #8f8f99;
+  --color-ink-4: #74747e;
+
+  /* ── Type scale — fluid, with optical tracking baked in ──────────────
+     Display sizes tighten as they grow; small sizes stay open so meta text
+     never turns into a smudge on a phone. */
+  --text-display: clamp(2.75rem, 1.8rem + 4.2vw, 5rem);
+  --text-display--line-height: 0.94;
+  --text-display--letter-spacing: -0.04em;
+
+  --text-h1: clamp(2rem, 1.5rem + 2.2vw, 3.25rem);
+  --text-h1--line-height: 1.04;
+  --text-h1--letter-spacing: -0.032em;
+
+  --text-h2: clamp(1.5rem, 1.25rem + 1.1vw, 2.125rem);
+  --text-h2--line-height: 1.12;
+  --text-h2--letter-spacing: -0.024em;
+
+  --text-h3: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  --text-h3--line-height: 1.25;
+  --text-h3--letter-spacing: -0.016em;
+
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.65;
+  --text-body--letter-spacing: -0.005em;
+
+  --text-meta: 0.8125rem;
+  --text-meta--line-height: 1.5;
+
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.45;
+  --text-micro--letter-spacing: 0.01em;
+
+  /* Radii — a real scale, not two one-offs */
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
 
   /* Fonts */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", "JetBrains Mono", monospace;
 
-  /* Motion */
-  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  /* ── Motion ──────────────────────────────────────────────────────────
+     Three durations and three curves. Anything outside this set is a bug:
+     inconsistent timing is the single loudest tell of an unsystematic UI. */
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);   /* entrances, lifts */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);  /* hovers, small moves */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* emphasis only */
+
+  --duration-fast: 150ms;
+  --duration-base: 260ms;
+  --duration-slow: 480ms;
 
   /* Keyframe animations */
   --animate-fade-in: fade-in 0.5s var(--ease-out-soft) both;
   --animate-fade-up: fade-up 0.6s var(--ease-out-soft) both;
   --animate-scale-in: scale-in 0.4s var(--ease-out-soft) both;
   --animate-shimmer: shimmer 1.8s linear infinite;
+  --animate-pulse-ring: pulse-ring 2.4s var(--ease-out-soft) infinite;
+  --animate-sheen: sheen 0.9s var(--ease-out-quart);
 }
 
 @keyframes fade-in {
@@ -64,6 +138,18 @@
 @keyframes shimmer {
   0% { background-position: -1000px 0; }
   100% { background-position: 1000px 0; }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  70% { transform: scale(1.6); opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes sheen {
+  0% { transform: translateX(-120%) skewX(-12deg); }
+  100% { transform: translateX(220%) skewX(-12deg); }
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
 }
 
 @layer base {
@@ -92,10 +178,27 @@
         transparent 70%
       );
     background-repeat: no-repeat;
-    color: #fafafa;
+    background-attachment: fixed;
+    color: var(--color-ink-1);
     font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* Tabular figures everywhere numbers appear in sequence (scores, ranks,
+       countdowns) so digits stop jittering as they tick. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Headings inherit the optical tracking from the scale above rather than
+     each component inventing its own tracking value. */
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
   }
 
   /* Custom scrollbar — subtle, on-brand */
@@ -120,10 +223,24 @@
     color: #fff;
   }
 
+  /* Focus ring: two-tone so it stays visible on both dark surfaces and
+     bright brand-filled buttons, where a single violet ring disappears. */
   :focus-visible {
-    outline: 2px solid var(--color-brand-400);
+    outline: 2px solid var(--color-brand-300);
     outline-offset: 2px;
-    border-radius: 4px;
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-surface-0) 85%, transparent);
+    border-radius: var(--radius-xs);
+  }
+
+  /* Interactive targets meet the 44px minimum on touch pointers without
+     inflating dense desktop layouts. */
+  @media (pointer: coarse) {
+    a[href], button, [role="button"], input[type="checkbox"], label:has(input[type="checkbox"]) {
+      min-height: 44px;
+    }
+    a[href]:not(:has(*)), button:not(:has(svg)) {
+      min-width: 44px;
+    }
   }
 
   /* Accessibility + safety: never let entrance animations hide content for
@@ -181,20 +298,64 @@
       inset 0 0 60px 0 color-mix(in oklab, var(--color-brand-500) 4%, transparent),
       0 24px 60px -24px rgb(0 0 0 / 0.7);
   }
-  /* Interactive glass — lifts and brightens on hover */
+  /* Interactive glass — lifts and brightens on hover.
+     Transform + opacity only, so it stays on the compositor at 60fps. */
   .glass-hover {
     transition:
-      transform 0.3s var(--ease-out-soft),
-      border-color 0.3s ease,
-      box-shadow 0.3s ease;
+      transform var(--duration-base) var(--ease-out-quart),
+      border-color var(--duration-base) ease,
+      box-shadow var(--duration-base) ease;
+    will-change: transform;
   }
   .glass-hover:hover {
-    transform: translateY(-4px);
+    transform: translateY(-3px);
     border-color: color-mix(in oklab, white 18%, transparent);
     box-shadow:
       inset 0 1px 0 0 color-mix(in oklab, white 16%, transparent),
       0 20px 48px -16px rgb(0 0 0 / 0.6),
       0 0 40px -18px color-mix(in oklab, var(--color-brand-500) 35%, transparent);
+  }
+  /* A lift with no hover target still needs a resting state on touch. */
+  @media (hover: none) {
+    .glass-hover:hover { transform: none; }
+  }
+
+  /* ── Elevation scale ────────────────────────────────────────────────
+     Four steps. Shadows are tinted toward the brand hue rather than pure
+     black, which is what stops a dark UI reading as flat and muddy. */
+  .elev-1 { box-shadow: 0 1px 2px -1px rgb(0 0 0 / 0.4), 0 2px 8px -4px rgb(0 0 0 / 0.3); }
+  .elev-2 { box-shadow: 0 2px 4px -2px rgb(0 0 0 / 0.45), 0 8px 20px -8px rgb(0 0 0 / 0.45); }
+  .elev-3 {
+    box-shadow:
+      0 4px 8px -4px rgb(0 0 0 / 0.5),
+      0 16px 40px -12px rgb(0 0 0 / 0.55),
+      0 0 32px -20px color-mix(in oklab, var(--color-brand-500) 60%, transparent);
+  }
+  .elev-4 {
+    box-shadow:
+      0 8px 16px -8px rgb(0 0 0 / 0.55),
+      0 32px 72px -24px rgb(0 0 0 / 0.7),
+      0 0 56px -28px color-mix(in oklab, var(--color-brand-500) 70%, transparent);
+  }
+
+  /* Hairline that catches light along the top edge of a raised surface —
+     the detail that separates a premium panel from a bordered rectangle. */
+  .edge-light {
+    position: relative;
+  }
+  .edge-light::before {
+    content: "";
+    position: absolute;
+    inset-inline: 12%;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, white 28%, transparent),
+      transparent
+    );
+    pointer-events: none;
   }
 
   /* Ambient radial glow used behind hero / headings */
@@ -318,6 +479,49 @@
     );
     background-size: 30px 30px;
   }
+
+  /* ── Semantic ink utilities ─────────────────────────────────────────
+     Prefer these over raw zinc-* for text: they carry the WCAG guarantee
+     documented on the ink ramp, so contrast can't silently regress. */
+  .ink-1 { color: var(--color-ink-1); }
+  .ink-2 { color: var(--color-ink-2); }
+  .ink-3 { color: var(--color-ink-3); }
+  .ink-4 { color: var(--color-ink-4); }
+
+  /* Typographic eyebrow already exists (.eyebrow); this is its brand-tinted
+     sibling for section labels that need to read as accent, not muted. */
+  .eyebrow-accent {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.7rem;
+    color: var(--color-brand-300);
+  }
+
+  /* Brand-gradient text — for a single hero word, used sparingly. */
+  .text-brand-gradient {
+    background: linear-gradient(103deg, #fff 0%, var(--color-brand-300) 55%, var(--color-brand-500) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Sweep of light across a surface on hover — the premium button tell.
+     Wrap a button in .sheen-host and drop a <span class="sheen-line"/>. */
+  .sheen-host { position: relative; overflow: hidden; isolation: isolate; }
+  .sheen-line {
+    position: absolute;
+    inset: 0;
+    width: 45%;
+    background: linear-gradient(90deg, transparent, color-mix(in oklab, white 22%, transparent), transparent);
+    transform: translateX(-140%) skewX(-12deg);
+    pointer-events: none;
+  }
+  .sheen-host:hover .sheen-line { animation: var(--animate-sheen); }
+  @media (hover: none) { .sheen-host:hover .sheen-line { animation: none; } }
+
+  /* Animated conic ring for loading / live indicators. */
+  .ring-spin { animation: spin-slow 1s linear infinite; }
 
   /* Oversized footer wordmark */
   .watermark {

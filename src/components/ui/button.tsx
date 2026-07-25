@@ -5,8 +5,10 @@ import { cn } from "@/lib/utils";
 export type ButtonVariant = "primary" | "brand" | "secondary" | "link" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
+// Motion uses the system tokens so every button shares one timing language.
+// Transform-only hover keeps it on the compositor at 60fps.
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-2xl font-medium tracking-tight transition-all duration-300 ease-out hover:scale-[1.03] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40";
+  "group/btn relative inline-flex items-center justify-center gap-2 rounded-2xl font-medium tracking-tight transition-[transform,background-color,border-color,box-shadow,color] duration-[var(--duration-fast)] ease-[var(--ease-out-quart)] hover:-translate-y-px active:translate-y-0 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 disabled:saturate-50";
 
 const sizeClasses: Record<ButtonSize, string> = {
   sm: "px-4 py-2 text-xs",
@@ -15,13 +17,13 @@ const sizeClasses: Record<ButtonSize, string> = {
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-white text-zinc-950 hover:bg-amber-200",
+  primary: "bg-white text-zinc-950 shadow-[0_6px_20px_-8px_rgba(0,0,0,0.6)] hover:bg-zinc-100",
   brand:
-    "bg-brand-500 text-white hover:bg-brand-400 shadow-[0_8px_28px_-10px_var(--color-brand-500)]",
+    "bg-gradient-to-b from-brand-400 to-brand-600 text-white shadow-[0_8px_28px_-10px_var(--color-brand-500)] hover:shadow-[0_12px_36px_-10px_var(--color-brand-500)] hover:brightness-110",
   secondary:
-    "bg-transparent text-white border border-white/20 hover:bg-white/5 hover:border-brand-400/50",
+    "bg-white/[0.03] text-white border border-white/15 hover:bg-white/[0.07] hover:border-brand-400/50",
   ghost: "bg-transparent text-zinc-300 hover:bg-white/5 hover:text-white",
-  danger: "bg-red-500/90 text-white hover:bg-red-500",
+  danger: "bg-red-500/90 text-white shadow-[0_8px_28px_-12px_#ef4444] hover:bg-red-500",
   link: "bg-transparent text-white underline underline-offset-4 hover:text-brand-300 px-0 py-0",
 };
 
