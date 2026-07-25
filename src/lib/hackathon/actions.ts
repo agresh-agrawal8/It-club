@@ -1,8 +1,18 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
+import { HACK_TAG } from "./data";
+
+/**
+ * Public hackathon reads are cached across requests (data.ts), so every write
+ * must drop the tag or organiser changes would not appear until it expired.
+ */
+function revalidateHack(...paths: string[]) {
+  revalidateTag(HACK_TAG);
+  for (const p of paths) revalidatePath(p);
+}
 
 /**
  * Infinium Hackathon organiser actions.
@@ -30,9 +40,7 @@ export async function postAnnouncementAction(_prev: unknown, formData: FormData)
     .insert({ title, body: body || null, pinned });
   if (error) return { error: error.message };
 
-  revalidatePath("/hackathon");
-  revalidatePath("/hackathon/dashboard");
-  revalidatePath("/hackathon/manage");
+  revalidateHack("/hackathon", "/hackathon/dashboard", "/hackathon/manage", "/hackathon/admin");
   return { success: "Announcement posted." };
 }
 
@@ -46,9 +54,7 @@ export async function toggleProblemReleaseAction(formData: FormData) {
   const supabase = createAdminClient();
   await supabase.from("hack_problems").update({ released: !released }).eq("id", id);
 
-  revalidatePath("/hackathon/dashboard");
-  revalidatePath("/hackathon/problems");
-  revalidatePath("/hackathon/manage");
+  revalidateHack("/hackathon/dashboard", "/hackathon/problems", "/hackathon/manage", "/hackathon/admin");
 }
 
 export async function setTeamStatusAction(formData: FormData) {
@@ -61,7 +67,10 @@ export async function setTeamStatusAction(formData: FormData) {
   const supabase = createAdminClient();
   await supabase.from("hack_teams").update({ status }).eq("id", id);
 
-  revalidatePath("/hackathon/dashboard");
-  revalidatePath("/hackathon/leaderboard");
-  revalidatePath("/hackathon/manage");
+  revalidateHack(
+    "/hackathon/dashboard",
+    "/hackathon/leaderboard",
+    "/hackathon/manage",
+    "/hackathon/admin",
+  );
 }

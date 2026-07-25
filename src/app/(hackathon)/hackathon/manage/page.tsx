@@ -13,6 +13,8 @@ import {
   resetTeamPasswordAction,
   assignProblemAction,
 } from "@/lib/hackathon/team-actions";
+import { TeamEditor } from "@/components/hackathon/team-editor";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { roleLabel } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Manage Infinium" };
@@ -97,15 +99,23 @@ export default async function ManagePage() {
               <div className="flex gap-2">
                 <form action={approveTeamAction}>
                   <input type="hidden" name="id" value={t.id} />
-                  <button className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-accent-400/40 hover:text-accent-300">
-                    <Check className="h-3.5 w-3.5" /> Approve &amp; issue ID
-                  </button>
+                  <SubmitButton
+                    icon={<Check className="h-3.5 w-3.5" />}
+                    pendingText="Approving…"
+                    className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-accent-400/40 hover:text-accent-300"
+                  >
+                    Approve &amp; issue ID
+                  </SubmitButton>
                 </form>
                 <form action={rejectTeamAction}>
                   <input type="hidden" name="id" value={t.id} />
-                  <button className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-red-400/40 hover:text-red-300">
-                    <X className="h-3.5 w-3.5" /> Reject
-                  </button>
+                  <SubmitButton
+                    icon={<X className="h-3.5 w-3.5" />}
+                    pendingText="Rejecting…"
+                    className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-red-400/40 hover:text-red-300"
+                  >
+                    Reject
+                  </SubmitButton>
                 </form>
               </div>
             </div>
@@ -151,9 +161,13 @@ export default async function ManagePage() {
                 )}
                 <form action={resetTeamPasswordAction}>
                   <input type="hidden" name="id" value={t.id} />
-                  <button className="flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] text-zinc-400 transition-colors hover:border-brand-400/40 hover:text-brand-300">
-                    <RefreshCw className="h-3.5 w-3.5" /> Reset
-                  </button>
+                  <SubmitButton
+                    icon={<RefreshCw className="h-3.5 w-3.5" />}
+                    pendingText="Resetting…"
+                    className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] text-zinc-400 transition-colors hover:border-brand-400/40 hover:text-brand-300"
+                  >
+                    Reset
+                  </SubmitButton>
                 </form>
               </div>
             </div>
@@ -178,9 +192,12 @@ export default async function ManagePage() {
                   );
                 })}
               </select>
-              <button className="rounded-lg border border-white/10 px-3 py-2 text-[11px] text-zinc-300 transition-colors hover:border-brand-400/40 hover:text-brand-300">
+              <SubmitButton
+                pendingText="Assigning…"
+                className="rounded-lg border border-white/10 px-3 py-2 text-[11px] text-zinc-300 transition-colors hover:border-brand-400/40 hover:text-brand-300"
+              >
                 Assign
-              </button>
+              </SubmitButton>
             </form>
 
             <div className="flex flex-wrap gap-2">
@@ -194,6 +211,25 @@ export default async function ManagePage() {
                 </span>
               ))}
             </div>
+
+            {/* Full edit: team details, members, deletion */}
+            <TeamEditor
+              team={{
+                id: t.id,
+                name: t.name,
+                school: t.school ?? null,
+                tagline: t.tagline ?? null,
+                status: t.status,
+                progress: t.progress ?? 0,
+              }}
+              members={(byTeam.get(t.id) ?? []).map((m: any) => ({
+                id: m.id,
+                name: m.name,
+                class_section: m.class_section,
+                member_role: m.member_role,
+                is_quiz_rep: Boolean(m.is_quiz_rep),
+              }))}
+            />
           </Card>
         ))}
       </section>

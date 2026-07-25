@@ -1,5 +1,7 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
+import { createPublicClient } from "@/lib/supabase/server";
 
 /**
  * Infinium Hackathon — read-only data access.
@@ -7,7 +9,24 @@ import { createClient } from "@/lib/supabase/server";
  * Completely separate from the club data layer. All reads use the public
  * anon client (hack_* tables are public-read); writes live in actions.ts and
  * go through the service-role client. Nothing here touches profiles/auth.
+ *
+ * ── Caching ────────────────────────────────────────────────────────────────
+ * Every read here is public and identical for all visitors, so each one is
+ * cached twice over:
+ *
+ *   • `cache()`          — dedupes within a single render. The landing page
+ *                          used to issue ~6 separate Supabase requests, some
+ *                          for the same rows (getProblems was fetched by the
+ *                          page and again inside getLeaderboard).
+ *   • `unstable_cache()` — shares the result across requests, so a repeat
+ *                          visitor is served without touching Supabase at all.
+ *
+ * Writes call `revalidateHackData()` (see actions), which drops the tag below,
+ * so edits still appear immediately — the cache never serves stale data after
+ * an organiser change.
  */
+
+export const HACK_TAG = "hack-data";
 
 async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
@@ -15,6 +34,14 @@ async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   } catch {
     return fallback;
   }
+}
+
+/**
+ * Wrap a public read so it is deduped per render and shared across requests.
+ * `revalidate` is a backstop only — tag invalidation is the primary mechanism.
+ */
+function publicRead<T>(key: string, fn: () => Promise<T>, revalidate = 60) {
+  return cache(unstable_cache(fn, [key], { tags: [HACK_TAG], revalidate }));
 }
 
 export interface HackEvent {
@@ -28,117 +55,152 @@ export interface HackEvent {
   prize_pool: string;
 }
 
-export async function getHackEvent(): Promise<HackEvent> {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase.from("hack_settings").select("value").eq("key", "event").single();
-    return (data?.value as HackEvent) ?? ({} as HackEvent);
-  }, {} as HackEvent);
-}
+export const getHackEvent = publicRead<HackEvent>(
+  "hack-event",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("hack_settings")
+        .select("value")
+        .eq("key", "event")
+        .single();
+      return (data?.value as HackEvent) ?? ({} as HackEvent);
+    }, {} as HackEvent),
+  300,
+);
 
-export async function getProblems() {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("hack_problems")
-      .select("*")
-      .order("code", { ascending: true });
-    return data ?? [];
-  }, [] as any[]);
-}
+export const getProblems = publicRead<any[]>(
+  "hack-problems",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("hack_problems")
+        .select("*")
+        .order("code", { ascending: true });
+      return data ?? [];
+    }, [] as any[]),
+  120,
+);
 
-export async function getSchedule() {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("hack_schedule")
-      .select("*")
-      .order("starts_at", { ascending: true });
-    return data ?? [];
-  }, [] as any[]);
-}
+export const getSchedule = publicRead<any[]>(
+  "hack-schedule",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("hack_schedule")
+        .select("*")
+        .order("starts_at", { ascending: true });
+      return data ?? [];
+    }, [] as any[]),
+  300,
+);
 
-export async function getAnnouncements() {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("hack_announcements")
-      .select("*")
-      .order("pinned", { ascending: false })
-      .order("created_at", { ascending: false });
-    return data ?? [];
-  }, [] as any[]);
-}
+export const getAnnouncements = publicRead<any[]>(
+  "hack-announcements",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("hack_announcements")
+        .select("*")
+        .order("pinned", { ascending: false })
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    }, [] as any[]),
+  30,
+);
 
-export async function getAchievements() {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("hack_achievements")
-      .select("*")
-      .order("position", { ascending: true });
-    return data ?? [];
-  }, [] as any[]);
-}
+export const getAchievements = publicRead<any[]>(
+  "hack-achievements",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("hack_achievements")
+        .select("*")
+        .order("position", { ascending: true });
+      return data ?? [];
+    }, [] as any[]),
+  300,
+);
 
-export async function getUnlockedAchievementIds(participantId: string | null) {
+/** Per-participant, so deliberately NOT shared across requests. */
+export const getUnlockedAchievementIds = cache(async (participantId: string | null) => {
   if (!participantId) return [] as string[];
   return safe(async () => {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("hack_participant_achievements")
       .select("achievement_id")
       .eq("participant_id", participantId);
     return (data ?? []).map((r: { achievement_id: string }) => r.achievement_id);
   }, [] as string[]);
-}
+});
 
-export async function getParticipants() {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("hack_participants")
-      .select("*")
-      .order("role", { ascending: true })
-      .order("name", { ascending: true });
-    return data ?? [];
-  }, [] as any[]);
-}
+export const getParticipants = publicRead<any[]>(
+  "hack-participants",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("hack_participants")
+        .select("*")
+        .order("role", { ascending: true })
+        .order("name", { ascending: true });
+      return data ?? [];
+    }, [] as any[]),
+  30,
+);
 
-export async function getTeams() {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("hack_teams")
-      .select("*")
-      .order("created_at", { ascending: true });
-    return data ?? [];
-  }, [] as any[]);
-}
+export const getTeams = publicRead<any[]>(
+  "hack-teams",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("hack_teams")
+        .select("*")
+        .order("created_at", { ascending: true });
+      return data ?? [];
+    }, [] as any[]),
+  30,
+);
 
-export async function getTeamMembers() {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase.from("hack_team_members").select("*");
-    return data ?? [];
-  }, [] as any[]);
-}
+export const getTeamMembers = publicRead<any[]>(
+  "hack-team-members",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase.from("hack_team_members").select("*");
+      return data ?? [];
+    }, [] as any[]),
+  60,
+);
 
-export async function getSubmissions() {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase.from("hack_submissions").select("*");
-    return data ?? [];
-  }, [] as any[]);
-}
+export const getSubmissions = publicRead<any[]>(
+  "hack-submissions",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase.from("hack_submissions").select("*");
+      return data ?? [];
+    }, [] as any[]),
+  30,
+);
 
-export async function getScores() {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase.from("hack_scores").select("*");
-    return data ?? [];
-  }, [] as any[]);
-}
+export const getScores = publicRead<any[]>(
+  "hack-scores",
+  async () =>
+    safe(async () => {
+      const supabase = createPublicClient();
+      const { data } = await supabase.from("hack_scores").select("*");
+      return data ?? [];
+    }, [] as any[]),
+  30,
+);
 
 export interface LeaderRow {
   team_id: string;

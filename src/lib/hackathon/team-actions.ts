@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { HACK_TAG } from "./data";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -202,9 +203,8 @@ export async function registerTeamAction(
   const passwordHash = hashPassword(password);
 
   const done = (teamCode: string): RegisterResult => {
+    revalidateManage();
     revalidatePath("/hackathon/register");
-    revalidatePath("/hackathon/manage");
-    revalidatePath("/hackathon/leaderboard");
     return {
       success: "Your team is registered. Save these credentials — you need them to sign in.",
       teamCode,
@@ -322,8 +322,7 @@ export async function approveTeamAction(formData: FormData) {
     })
     .eq("id", id);
 
-  revalidatePath("/hackathon/manage");
-  revalidatePath("/hackathon/leaderboard");
+  revalidateManage();
 }
 
 export async function rejectTeamAction(formData: FormData) {
@@ -332,7 +331,277 @@ export async function rejectTeamAction(formData: FormData) {
   if (!id) return;
   const supabase = createAdminClient();
   await supabase.from("hack_teams").update({ reg_status: "rejected" }).eq("id", id);
+  revalidateManage();
+}
+
+/* ───────────────── CORE TEAM: full team & member editing ───────────────── */
+
+const MEMBER_ROLES = ["captain", "frontend", "backend", "uiux", "docs"] as const;
+type MemberRole = (typeof MEMBER_ROLES)[number];
+
+/**
+ * One revalidation helper so every mutation refreshes the same surfaces.
+ *
+ * The tag drop is the important part: public reads are cached across requests
+ * (see data.ts), so without it an organiser edit would not show up until the
+ * cache expired. Dropping the tag makes edits appear immediately while still
+ * letting ordinary visitors be served from cache.
+ */
+function revalidateManage() {
+  revalidateTag(HACK_TAG);
   revalidatePath("/hackathon/manage");
+  revalidatePath("/hackathon/admin");
+  revalidatePath("/hackathon/judge");
+  revalidatePath("/hackathon/dashboard");
+  revalidatePath("/hackathon/leaderboard");
+  revalidatePath("/hackathon");
+}
+
+/**
+ * Permanently delete a team.
+ *
+ * Members, submissions, scores and awarded cards are removed by ON DELETE
+ * CASCADE. Requires the team's exact name as confirmation, because this is
+ * irreversible and a mis-click during a live event would destroy a team's work.
+ */
+export async function deleteTeamAction(_prev: unknown, formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const confirmName = String(formData.get("confirm_name") ?? "").trim();
+  if (!id) return { error: "Missing team." };
+
+  const supabase = createAdminClient();
+  const { data: team } = await supabase
+    .from("hack_teams")
+    .select("name")
+    .eq("id", id)
+    .maybeSingle();
+  if (!team) return { error: "That team no longer exists." };
+
+  if (confirmName.toLowerCase() !== team.name.toLowerCase()) {
+    return { error: `Type the team name exactly ("${team.name}") to confirm deletion.` };
+  }
+
+  const { error } = await supabase.from("hack_teams").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidateManage();
+  return { success: `"${team.name}" and all its data were deleted.` };
+}
+
+/** Edit a team's own details. */
+export async function updateTeamDetailsAction(_prev: unknown, formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { error: "Missing team." };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const school = String(formData.get("school") ?? "").trim();
+  const tagline = String(formData.get("tagline") ?? "").trim();
+  const status = String(formData.get("status") ?? "").trim();
+  const progressRaw = Number(formData.get("progress") ?? 0);
+
+  if (name.length < 3) return { error: "Team name needs at least 3 characters." };
+  if (!["forming", "active", "submitted", "disqualified"].includes(status))
+    return { error: "Pick a valid team status." };
+
+  const supabase = createAdminClient();
+
+  // Team names are shown on the public leaderboard, so keep them unique.
+  const { data: clash } = await supabase
+    .from("hack_teams")
+    .select("id")
+    .ilike("name", name)
+    .neq("id", id)
+    .maybeSingle();
+  if (clash) return { error: "Another team already uses that name." };
+
+  const { error } = await supabase
+    .from("hack_teams")
+    .update({
+      name,
+      school: school || null,
+      tagline: tagline || null,
+      status,
+      progress: Math.max(0, Math.min(100, Number.isFinite(progressRaw) ? progressRaw : 0)),
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidateManage();
+  return { success: "Team details saved." };
+}
+
+/**
+ * Validate that a role/quiz change keeps the team within the event rules:
+ * each of the five roles at most once, and at most two quiz representatives.
+ */
+async function checkTeamComposition(
+  supabase: ReturnType<typeof createAdminClient>,
+  teamId: string,
+  change: { memberId?: string; role?: MemberRole; quiz?: boolean },
+) {
+  const { data: members } = await supabase
+    .from("hack_participants")
+    .select("id, member_role, is_quiz_rep")
+    .eq("team_id", teamId);
+
+  const rows = (members ?? []).map((m: any) => ({
+    id: m.id as string,
+    role: m.member_role as string,
+    quiz: Boolean(m.is_quiz_rep),
+  }));
+
+  // Apply the pending change in memory before validating.
+  if (change.memberId) {
+    const target = rows.find((r) => r.id === change.memberId);
+    if (target) {
+      if (change.role) target.role = change.role;
+      if (change.quiz !== undefined) target.quiz = change.quiz;
+    }
+  } else if (change.role) {
+    rows.push({ id: "new", role: change.role, quiz: Boolean(change.quiz) });
+  }
+
+  if (rows.length > 5) return "A team can have at most 5 members.";
+
+  const roleCounts = new Map<string, number>();
+  for (const r of rows) roleCounts.set(r.role, (roleCounts.get(r.role) ?? 0) + 1);
+  for (const [role, count] of roleCounts) {
+    if (count > 1) return `Two members cannot both be ${role}. Each role is held once.`;
+  }
+
+  if (rows.filter((r) => r.quiz).length > 2)
+    return "A team can have at most 2 quiz representatives.";
+
+  return null;
+}
+
+/** Edit one member's name, class, role or quiz-rep flag. */
+export async function updateMemberAction(_prev: unknown, formData: FormData) {
+  await requireAdmin();
+  const memberId = String(formData.get("member_id") ?? "");
+  const teamId = String(formData.get("team_id") ?? "");
+  if (!memberId || !teamId) return { error: "Missing member." };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const classSection = String(formData.get("class_section") ?? "").trim();
+  const role = String(formData.get("member_role") ?? "").trim();
+  const quiz = formData.get("is_quiz_rep") === "on" || formData.get("is_quiz_rep") === "true";
+
+  if (name.length < 2) return { error: "Enter the member's full name." };
+  if (!classSection) return { error: "Enter the member's class/section." };
+  if (!MEMBER_ROLES.includes(role as MemberRole)) return { error: "Pick a valid role." };
+
+  const supabase = createAdminClient();
+  const problem = await checkTeamComposition(supabase, teamId, {
+    memberId,
+    role: role as MemberRole,
+    quiz,
+  });
+  if (problem) return { error: problem };
+
+  // A student may only appear on one team — enforced here as well as by the
+  // unique index, so the admin gets a readable message instead of a 23505.
+  const { data: elsewhere } = await supabase
+    .from("hack_participants")
+    .select("id")
+    .neq("id", memberId)
+    .not("team_id", "is", null)
+    .ilike("name", name)
+    .ilike("class_section", classSection)
+    .maybeSingle();
+  if (elsewhere) return { error: `${name} (${classSection}) is already on another team.` };
+
+  const { error } = await supabase
+    .from("hack_participants")
+    .update({
+      name,
+      class_section: classSection,
+      member_role: role,
+      is_quiz_rep: quiz,
+    })
+    .eq("id", memberId)
+    .eq("team_id", teamId);
+  if (error) {
+    if (error.code === "23505") return { error: `${name} (${classSection}) is already registered.` };
+    return { error: error.message };
+  }
+
+  revalidateManage();
+  return { success: "Member updated." };
+}
+
+/** Add a member to an existing team. */
+export async function addMemberAction(_prev: unknown, formData: FormData) {
+  await requireAdmin();
+  const teamId = String(formData.get("team_id") ?? "");
+  if (!teamId) return { error: "Missing team." };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const classSection = String(formData.get("class_section") ?? "").trim();
+  const role = String(formData.get("member_role") ?? "").trim();
+  const quiz = formData.get("is_quiz_rep") === "on" || formData.get("is_quiz_rep") === "true";
+
+  if (name.length < 2) return { error: "Enter the member's full name." };
+  if (!classSection) return { error: "Enter the member's class/section." };
+  if (!MEMBER_ROLES.includes(role as MemberRole)) return { error: "Pick a valid role." };
+
+  const supabase = createAdminClient();
+  const problem = await checkTeamComposition(supabase, teamId, { role: role as MemberRole, quiz });
+  if (problem) return { error: problem };
+
+  const { data: elsewhere } = await supabase
+    .from("hack_participants")
+    .select("id")
+    .not("team_id", "is", null)
+    .ilike("name", name)
+    .ilike("class_section", classSection)
+    .maybeSingle();
+  if (elsewhere) return { error: `${name} (${classSection}) is already on a team.` };
+
+  const { error } = await supabase.from("hack_participants").insert({
+    name,
+    class_section: classSection,
+    member_role: role,
+    is_quiz_rep: quiz,
+    role: "student",
+    team_id: teamId,
+  });
+  if (error) {
+    if (error.code === "23505") return { error: `${name} (${classSection}) is already registered.` };
+    return { error: error.message };
+  }
+
+  revalidateManage();
+  return { success: `${name} added.` };
+}
+
+/** Remove a member from a team. Refuses to leave a team below 2 members. */
+export async function removeMemberAction(_prev: unknown, formData: FormData) {
+  await requireAdmin();
+  const memberId = String(formData.get("member_id") ?? "");
+  const teamId = String(formData.get("team_id") ?? "");
+  if (!memberId || !teamId) return { error: "Missing member." };
+
+  const supabase = createAdminClient();
+  const { count } = await supabase
+    .from("hack_participants")
+    .select("*", { count: "exact", head: true })
+    .eq("team_id", teamId);
+
+  if ((count ?? 0) <= 2)
+    return { error: "A team needs at least 2 members — edit this member instead of removing them." };
+
+  const { error } = await supabase
+    .from("hack_participants")
+    .delete()
+    .eq("id", memberId)
+    .eq("team_id", teamId);
+  if (error) return { error: error.message };
+
+  revalidateManage();
+  return { success: "Member removed." };
 }
 
 /** Regenerate a team's password (if students lose it). */
@@ -346,7 +615,7 @@ export async function resetTeamPasswordAction(formData: FormData) {
     .from("hack_teams")
     .update({ password_hash: hashPassword(password), join_code: password })
     .eq("id", id);
-  revalidatePath("/hackathon/manage");
+  revalidateManage();
 }
 
 /** Assign a unique problem envelope to a team. */
@@ -360,8 +629,7 @@ export async function assignProblemAction(formData: FormData) {
     .from("hack_teams")
     .update({ problem_id: problemId || null })
     .eq("id", teamId);
-  revalidatePath("/hackathon/manage");
-  revalidatePath("/hackathon/dashboard");
+  revalidateManage();
 }
 
 /* ─────────────────────────── SUBMISSION ─────────────────────────── */

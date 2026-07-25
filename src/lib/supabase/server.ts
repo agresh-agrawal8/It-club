@@ -35,6 +35,25 @@ export async function createClient() {
   );
 }
 
+/**
+ * Cookieless anon client for PUBLIC reads (tables whose RLS grants
+ * `select using (true)` — the hack_* and public ev_* content).
+ *
+ * Because it never touches cookies it carries no per-user state, which is what
+ * makes it safe to wrap in `unstable_cache`: the cached value is identical for
+ * every visitor. `createClient()` reads cookies, so calling it inside a cache
+ * scope throws — that is the whole reason this exists.
+ *
+ * Never use it for anything user-specific or permission-dependent.
+ */
+export function createPublicClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+}
+
 /** True when the service-role key is available in this environment. */
 export function hasServiceRole() {
   return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL);
