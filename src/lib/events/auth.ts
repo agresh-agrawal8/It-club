@@ -1,6 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient, hasServiceRole } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { isAdminRole } from "@/lib/utils";
 import { readEventSession } from "./session";
@@ -50,9 +50,12 @@ export async function getEventActor(eventId: string, eventSlug: string): Promise
     }
 
     // Path C: an event-session cookie identifies a participant directly.
+    // The cookie is HMAC-verified here, but RLS cannot see it (ev_current_participant
+    // reads a JWT claim), so the participant lookup must run server-side with
+    // elevated rights *after* that verification.
     participantId = await readEventSession(eventSlug).catch(() => null);
 
-    const supabase = await createClient();
+    const supabase = participantId && hasServiceRole() ? createAdminClient() : await createClient();
     // Resolve the participant row (by session id, else by linked profile) and
     // fold in its role plus any extra granted roles.
     const { data: participant } = participantId

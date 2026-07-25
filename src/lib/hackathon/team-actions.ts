@@ -37,7 +37,8 @@ async function registerTeamWithAdminClient(
   school: string,
   tagline: string,
   members: TeamMemberInput[],
-) {
+  credentials: { hash: string; plain: string },
+): Promise<{ error: string } | { teamCode: string }> {
   if (!hasServiceRole()) {
     return {
       error:
@@ -82,14 +83,32 @@ async function registerTeamWithAdminClient(
       error: `${clash.name} (${clash.class_section}) is already registered with another team. Each student can only join one team.`,
     };
 
+  // Allocate the next Team ID. Without the advisory lock the RPC provides,
+  // this fallback can only be best-effort — it is the degraded path.
+  const { data: highest } = await supabase
+    .from("hack_teams")
+    .select("team_no")
+    .not("team_no", "is", null)
+    .order("team_no", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextNo = (highest?.team_no ?? 0) + 1;
+  const teamCode = `INF-T${String(nextNo).padStart(2, "0")}`;
+
   const { data: team, error: teamError } = await supabase
     .from("hack_teams")
     .insert({
       name: teamName,
       tagline: tagline || null,
       school: school || null,
-      reg_status: "pending",
-      status: "forming",
+      // Credentials are live immediately — see 0016_hackathon_instant_credentials.
+      reg_status: "approved",
+      status: "active",
+      team_no: nextNo,
+      team_code: teamCode,
+      password_hash: credentials.hash,
+      join_code: credentials.plain,
+      approved_at: new Date().toISOString(),
     })
     .select("id")
     .single();
@@ -111,7 +130,7 @@ async function registerTeamWithAdminClient(
     return { error: membersError.message };
   }
 
-  return { success: true };
+  return { teamCode };
 }
 
 /* ─────────────────────────── REGISTRATION ─────────────────────────── */
@@ -121,14 +140,24 @@ const memberSchema = z.object({
   class_section: z.string().trim().min(1),
 });
 
+export type RegisterResult =
+  | { error: string }
+  | { success: string; teamCode: string; password: string };
+
 /**
  * Public team registration.
  *
  * Enforces the event rules: up to 5 members, exactly one captain, each of the
  * five roles owned once, exactly 2 quiz representatives, max 10 teams, and
  * — critically — no student may already appear on another team.
+ *
+ * On success the team's credentials are issued immediately and returned, so
+ * students can sign in straight away instead of waiting on a manual approval.
  */
-export async function registerTeamAction(_prev: unknown, formData: FormData) {
+export async function registerTeamAction(
+  _prev: unknown,
+  formData: FormData,
+): Promise<RegisterResult> {
   const teamName = String(formData.get("team_name") ?? "").trim();
   const school = String(formData.get("school") ?? "").trim();
   const tagline = String(formData.get("tagline") ?? "").trim();
@@ -167,11 +196,27 @@ export async function registerTeamAction(_prev: unknown, formData: FormData) {
   if (new Set(keys).size !== keys.length)
     return { error: "The same student is listed twice in this team." };
 
+  // Credentials are minted here so there is exactly one password-hashing
+  // implementation (team-auth.ts); the database only ever sees the hash.
+  const password = generatePassword();
+  const passwordHash = hashPassword(password);
+
+  const done = (teamCode: string): RegisterResult => {
+    revalidatePath("/hackathon/register");
+    revalidatePath("/hackathon/manage");
+    revalidatePath("/hackathon/leaderboard");
+    return {
+      success: "Your team is registered. Save these credentials — you need them to sign in.",
+      teamCode,
+      password,
+    };
+  };
+
   // All remaining validation + inserts happen inside one SECURITY DEFINER
-  // transaction, so capacity/duplicate checks cannot race and the flow works
-  // without the service-role key being configured.
+  // transaction, so capacity/duplicate checks and Team ID allocation cannot
+  // race two simultaneous submissions.
   const supabase = await createClient();
-  const { error } = await supabase.rpc("hack_register_team", {
+  const { data, error } = await supabase.rpc("hack_register_team_v2", {
     p_team_name: teamName,
     p_school: school,
     p_tagline: tagline,
@@ -181,31 +226,28 @@ export async function registerTeamAction(_prev: unknown, formData: FormData) {
       role: m.role,
       quiz: m.quiz,
     })),
+    p_password_hash: passwordHash,
+    p_password_plain: password,
   });
 
   if (error) {
     if (isRlsOrMissingRpcError(error)) {
-      const fallback = await registerTeamWithAdminClient(teamName, school, tagline, members);
+      const fallback = await registerTeamWithAdminClient(teamName, school, tagline, members, {
+        hash: passwordHash,
+        plain: password,
+      });
       if ("error" in fallback) return fallback;
-
-      revalidatePath("/hackathon/register");
-      revalidatePath("/hackathon/manage");
-      return {
-        success:
-          "Registration received! The core team will review it and issue your Team ID and password.",
-      };
+      return done(fallback.teamCode);
     }
 
     // Postgres RAISE messages arrive prefixed; show just the human sentence.
     return { error: error.message.replace(/^.*?:\s*/, "") || "Could not register the team." };
   }
 
-  revalidatePath("/hackathon/register");
-  revalidatePath("/hackathon/manage");
-  return {
-    success:
-      "Registration received! The core team will review it and issue your Team ID and password.",
-  };
+  const result = data as { team_code?: string } | null;
+  if (!result?.team_code) return { error: "Could not issue your Team ID. Tell the core team." };
+
+  return done(result.team_code);
 }
 
 /* ─────────────────────────── TEAM LOGIN ─────────────────────────── */

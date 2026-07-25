@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, ArrowUpRight } from "lucide-react";
+import { Menu, X, ArrowUpRight, Settings2, Gavel } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Container } from "@/components/ui/container";
 import { ButtonLink } from "@/components/ui/button";
@@ -16,8 +16,14 @@ const LINKS = [
   { href: "/hackathon/leaderboard", label: "Leaderboard" },
 ];
 
+/** Core-team-only panels, appended to the nav when the viewer is an admin. */
+const ADMIN_LINKS = [
+  { href: "/hackathon/manage", label: "Manage", icon: Settings2 },
+  { href: "/hackathon/judge", label: "Judging", icon: Gavel },
+];
+
 /** Infinium's own nav — Avinya theme, distinct violet→green identity. */
-export function HackNav() {
+export function HackNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -55,6 +61,21 @@ export function HackNav() {
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
+          {isAdmin &&
+            ADMIN_LINKS.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors",
+                  pathname.startsWith(href)
+                    ? "border-accent-400/50 bg-accent-500/15 text-accent-200"
+                    : "border-white/10 text-zinc-400 hover:border-accent-400/40 hover:text-white",
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" /> {label}
+              </Link>
+            ))}
           <Link href="/" className="flex items-center gap-1 text-xs text-zinc-500 hover:text-white">
             Avinya <ArrowUpRight className="h-3 w-3" />
           </Link>
@@ -85,6 +106,23 @@ export function HackNav() {
                 {l.label}
               </Link>
             ))}
+            {isAdmin && (
+              <>
+                <span className="mt-2 px-3 text-[10px] uppercase tracking-[0.18em] text-zinc-600">
+                  Core team
+                </span>
+                {ADMIN_LINKS.map(({ href, label, icon: Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-accent-200 hover:bg-white/5"
+                  >
+                    <Icon className="h-4 w-4" /> {label}
+                  </Link>
+                ))}
+              </>
+            )}
             <ButtonLink
               href="/hackathon/login"
               variant="brand"

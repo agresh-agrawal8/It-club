@@ -57,12 +57,22 @@ export function readSessionToken(token: string | undefined | null): string | nul
   return subjectId;
 }
 
-export function sessionCookieOptions(eventSlug: string) {
+/**
+ * Cookie is scoped by NAME (`ev_sess_<slug>`), not by path.
+ *
+ * A path scope has to mirror the route shape exactly, and silently stops
+ * working the moment the route moves — which is what happened when the event
+ * domain mounted at /events/hub/<slug> while this said /events/<slug>: the
+ * cookie was set but never sent back, so every participant looked signed out.
+ * The name already namespaces per event, so path "/" is both simpler and
+ * immune to that class of bug.
+ */
+export function sessionCookieOptions(_eventSlug: string) {
   return {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    path: `/events/${eventSlug}`,
+    path: "/",
     maxAge: MAX_AGE_S,
   } as const;
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { CheckCircle2, Crown, Send, Users } from "lucide-react";
+import { Crown, Send, Users } from "lucide-react";
 import { registerTeamAction } from "@/lib/hackathon/team-actions";
+import { CredentialsPanel } from "@/components/hackathon/credentials-panel";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -33,18 +34,14 @@ export function RegisterForm() {
     });
   }
 
-  if (state && "success" in state && state.success) {
+  // Credentials are issued at registration and shown exactly once.
+  if (state && "teamCode" in state) {
     return (
-      <div className="flex flex-col items-center gap-4 py-14 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-500/15 text-accent-400">
-          <CheckCircle2 className="h-7 w-7" />
-        </span>
-        <h3 className="text-xl font-semibold tracking-tight text-white">Registration received</h3>
-        <p className="max-w-md text-sm leading-relaxed text-zinc-400">{state.success}</p>
-        <p className="text-xs text-zinc-600">
-          You&apos;ll be given a Team ID (e.g. INF-T01) and password to sign in to your dashboard.
-        </p>
-      </div>
+      <CredentialsPanel
+        teamCode={state.teamCode}
+        password={state.password}
+        message={state.success}
+      />
     );
   }
 

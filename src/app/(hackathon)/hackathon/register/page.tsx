@@ -50,14 +50,14 @@ export default async function RegisterPage() {
               desc: "One member fills in the whole team — names, class/section, roles and the two quiz reps.",
             },
             {
-              icon: ShieldCheck,
-              title: "2 · Core team approves",
-              desc: "The Avinya core team reviews your entry and approves it.",
+              icon: KeyRound,
+              title: "2 · Get your Team ID instantly",
+              desc: "Your Team ID (INF-T01) and password appear on screen the moment you submit. Save them — the password is shown only once.",
             },
             {
-              icon: KeyRound,
-              title: "3 · Get your Team ID",
-              desc: "You receive a Team ID (INF-T01) and password to sign in to your team dashboard.",
+              icon: ShieldCheck,
+              title: "3 · Sign in and build",
+              desc: "Use them at Team sign in to reach your dashboard. The core team assigns your problem envelope before orientation.",
             },
           ].map(({ icon: Icon, title, desc }) => (
             <Card key={title} className="flex items-start gap-4 p-5">

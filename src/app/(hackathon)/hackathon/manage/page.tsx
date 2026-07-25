@@ -59,7 +59,8 @@ export default async function ManagePage() {
             Manage Infinium
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Approve registrations, issue credentials and assign problem envelopes.
+            Teams now receive their Team ID and password the moment they register. Use this panel to
+            assign problem envelopes, re-issue lost passwords and remove teams.
           </p>
         </div>
         <div className="flex gap-2">
