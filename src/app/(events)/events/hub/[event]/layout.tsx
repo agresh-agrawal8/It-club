@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { EventNav } from "@/components/events/shell/event-nav";
 import { getEvent, getEventSettings, resolveTheme, themeVars, can } from "@/lib/events/engine";
 import { readEventSession } from "@/lib/events/session";
+import { getEventActor } from "@/lib/events/auth";
 
 /**
  * Per-event layout.
@@ -42,15 +43,18 @@ export default async function EventLayout({
   const theme = resolveTheme(event);
   const base = `/events/hub/${event.slug}`;
   const participantId = await readEventSession(event.slug).catch(() => null);
+  const actor = await getEventActor(event.id, event.slug);
+  const isOrganiser = actor.isClubAdmin || actor.roles.some((r) => r === "admin" || r === "super_admin");
 
   // Navigation is derived from capabilities — an event with missions turned
-  // off simply has no Missions tab.
+  // off simply has no Missions tab. The Organiser tab appears only for admins.
   const links = [
     { href: base, label: "Overview" },
     ...(can(settings, "missions_enabled") ? [{ href: `${base}/missions`, label: "Missions" }] : []),
     { href: `${base}/schedule`, label: "Schedule" },
     { href: `${base}/leaderboard`, label: "Leaderboard" },
     ...(can(settings, "gallery_enabled") ? [{ href: `${base}/gallery`, label: "Gallery" }] : []),
+    ...(isOrganiser ? [{ href: `${base}/admin`, label: "Organiser" }] : []),
   ];
 
   return (
