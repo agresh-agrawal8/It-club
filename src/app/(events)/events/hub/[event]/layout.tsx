@@ -61,7 +61,6 @@ export default async function EventLayout({
     <div style={themeVars(theme)} className="min-h-screen bg-[var(--ev-surface)]">
       <EventNav
         base={base}
-        codename={theme.codename}
         name={event.name}
         links={links}
         signedIn={Boolean(participantId)}

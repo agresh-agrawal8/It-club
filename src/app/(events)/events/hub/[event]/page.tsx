@@ -5,6 +5,7 @@ import { Container } from "@/components/ui/container";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Countdown } from "@/components/events/shell/countdown";
+import { EventMark } from "@/components/events/shell/event-mark";
 import {
   getEvent,
   getEventSettings,
@@ -94,6 +95,10 @@ export default async function EventLandingPage({
           </div>
 
           <div className="max-w-3xl">
+            <EventMark
+              title={event.name}
+              className="mb-6 h-20 w-20 rounded-2xl md:h-24 md:w-24"
+            />
             <h1 className="text-5xl font-semibold leading-[0.95] tracking-tighter text-white md:text-7xl">
               {event.name}
             </h1>

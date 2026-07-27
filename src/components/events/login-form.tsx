@@ -41,7 +41,7 @@ export function EventLoginForm({ eventSlug, codeHint }: { eventSlug: string; cod
         />
       </label>
 
-      <Button type="submit" variant="brand" disabled={pending} className="mt-1 rounded-full">
+      <Button type="submit" variant="brand" disabled={pending} className="ev-cta mt-1 rounded-full">
         <LogIn className="h-4 w-4" /> {pending ? "Signing in…" : "Enter dashboard"}
       </Button>
 

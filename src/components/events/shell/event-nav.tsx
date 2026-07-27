@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { EventMark } from "./event-mark";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,13 +13,11 @@ import { cn } from "@/lib/utils";
  */
 export function EventNav({
   base,
-  codename,
   name,
   links,
   signedIn,
 }: {
   base: string;
-  codename: string;
   name: string;
   links: { href: string; label: string }[];
   signedIn: boolean;
@@ -28,13 +27,11 @@ export function EventNav({
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[var(--ev-surface)]/85 backdrop-blur-xl">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-6 px-5">
-        <Link href={base} className="flex items-center gap-2.5">
-          <span
-            className="grid h-7 w-7 place-items-center rounded-lg text-[11px] font-bold tracking-tight text-white"
-            style={{ background: "var(--ev-accent)" }}
-          >
-            {codename}
-          </span>
+        <Link href={base} className="group flex items-center gap-2.5">
+          <EventMark
+            title={name}
+            className="h-8 w-8 rounded-lg transition-transform duration-500 ease-out group-hover:-translate-y-0.5"
+          />
           <span className="hidden text-sm font-semibold tracking-tight text-white sm:block">
             {name}
           </span>

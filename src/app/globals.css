@@ -523,6 +523,21 @@
   /* Animated conic ring for loading / live indicators. */
   .ring-spin { animation: spin-slow 1s linear infinite; }
 
+  /* ── Event CTA ──────────────────────────────────────────────────────
+     Primary buttons inside the event domain must wear the EVENT's accent,
+     not the club violet — a violet button on a red mission-control page
+     reads as a different product. Overrides the brand variant's gradient. */
+  .ev-cta {
+    background-image: none;
+    background-color: var(--ev-accent);
+    color: #fff;
+    box-shadow: 0 8px 28px -10px var(--ev-accent);
+  }
+  .ev-cta:hover {
+    background-color: var(--ev-accent);
+    filter: brightness(1.1);
+  }
+
   /* Oversized footer wordmark */
   .watermark {
     background: linear-gradient(

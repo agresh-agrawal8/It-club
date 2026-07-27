@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { getEvent, resolveTheme } from "@/lib/events/engine";
 import { readEventSession } from "@/lib/events/session";
 import { EventLoginForm } from "@/components/events/login-form";
+import { EventMark } from "@/components/events/shell/event-mark";
 
 export const metadata = { title: "Team sign in" };
 
@@ -28,12 +29,7 @@ export default async function EventLoginPage({
     <Container className="flex min-h-[70vh] items-center justify-center py-14">
       <Card deep className="w-full max-w-md p-7 md:p-8">
         <div className="mb-6 text-center">
-          <span
-            className="mx-auto grid h-11 w-11 place-items-center rounded-xl text-xs font-bold text-white"
-            style={{ background: theme.accent }}
-          >
-            {theme.codename}
-          </span>
+          <EventMark title={event.name} className="mx-auto h-14 w-14 rounded-xl" />
           <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">Team sign in</h1>
           <p className="mt-1.5 text-sm text-zinc-400">
             Use the Team ID and password issued when you registered.

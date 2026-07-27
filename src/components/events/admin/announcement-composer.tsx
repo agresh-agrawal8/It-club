@@ -47,7 +47,7 @@ export function AnnouncementComposer({ eventSlug }: { eventSlug: string }) {
           variant="brand"
           size="sm"
           disabled={pending}
-          className="ml-auto rounded-full"
+          className="ev-cta ml-auto rounded-full"
         >
           <Send className="h-4 w-4" /> {pending ? "Posting…" : "Post"}
         </Button>

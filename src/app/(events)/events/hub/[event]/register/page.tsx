@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { getEvent, getEventSettings, countRegistered } from "@/lib/events/engine";
 import { registrationOpen } from "@/lib/events/rules";
 import { EventRegisterForm } from "@/components/events/register-form";
+import { EventMark } from "@/components/events/shell/event-mark";
 
 export const metadata = { title: "Register" };
 
@@ -32,6 +33,7 @@ export default async function EventRegisterPage({
       {/* Explainer */}
       <div className="flex flex-col gap-5">
         <div>
+          <EventMark title={event.name} className="mb-4 h-14 w-14 rounded-xl" />
           <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-zinc-500">
             Team registration
           </span>

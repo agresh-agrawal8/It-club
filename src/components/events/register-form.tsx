@@ -234,7 +234,7 @@ export function EventRegisterForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
-        <Button type="submit" variant="brand" disabled={pending} className="rounded-full">
+        <Button type="submit" variant="brand" disabled={pending} className="ev-cta rounded-full">
           <Send className="h-4 w-4" /> {pending ? "Registering…" : "Register team"}
         </Button>
         {state && "error" in state && state.error && (

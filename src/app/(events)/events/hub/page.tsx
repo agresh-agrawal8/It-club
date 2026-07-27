@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { listEvents, resolveTheme } from "@/lib/events/engine";
+import { EventMark } from "@/components/events/shell/event-mark";
 import { eventPhase } from "@/lib/events/rules";
 import { formatDate } from "@/lib/utils";
 
@@ -72,11 +73,10 @@ export default async function EventHubPage() {
 
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <span
-                        className="grid h-10 w-10 place-items-center rounded-xl text-xs font-bold text-white"
-                        style={{ background: theme.accent }}
-                      >
-                        {theme.codename}
+                      {/* Each card scopes the accent so its mark takes that
+                          event's colour, not the previous card's. */}
+                      <span style={{ ["--ev-accent" as string]: theme.accent }}>
+                        <EventMark title={event.name} className="h-11 w-11 rounded-xl" />
                       </span>
                       <div>
                         <h2 className="text-lg font-semibold tracking-tight text-white">

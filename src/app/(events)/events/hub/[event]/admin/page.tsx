@@ -9,6 +9,7 @@ import { getMissions, getAnnouncements } from "@/lib/events/queries";
 import { requireEventAdmin } from "@/lib/events/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AnnouncementComposer } from "@/components/events/admin/announcement-composer";
+import { EventMark } from "@/components/events/shell/event-mark";
 import {
   deleteEventAnnouncementAction,
   setMissionStatusAction,
@@ -84,8 +85,8 @@ export default async function EventAdminPage({
           >
             <ArrowLeft className="h-3.5 w-3.5" /> {event.name}
           </Link>
-          <h1 className="flex items-center gap-2.5 text-3xl font-semibold tracking-tighter text-white">
-            <Settings2 className="h-7 w-7" style={{ color: "var(--ev-accent)" }} />
+          <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tighter text-white">
+            <EventMark title={event.name} className="h-11 w-11 rounded-xl" />
             Organiser console
           </h1>
         </div>

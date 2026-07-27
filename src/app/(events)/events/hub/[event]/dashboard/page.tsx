@@ -26,6 +26,7 @@ import { requireEventParticipant } from "@/lib/events/auth";
 import { missionState } from "@/lib/events/rules";
 import type { MissionProgress, MissionState } from "@/lib/events/types";
 import { eventLogoutAction } from "@/lib/events/actions/registration";
+import { EventMark } from "@/components/events/shell/event-mark";
 import { timeAgo } from "@/lib/utils";
 
 export const metadata = { title: "Dashboard" };
@@ -131,7 +132,9 @@ export default async function EventDashboardPage({
     <Container className="flex flex-col gap-6 py-10 md:gap-8">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="flex items-start gap-4">
+          <EventMark title={event.name} className="h-12 w-12 rounded-xl" />
+          <div>
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="font-mono text-sm" style={{ color: "var(--ev-accent)" }}>
               {event.name}
@@ -146,6 +149,7 @@ export default async function EventDashboardPage({
           {overview.team.tagline && (
             <p className="mt-1 text-sm text-zinc-400">{overview.team.tagline}</p>
           )}
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {rank >= 0 && (
