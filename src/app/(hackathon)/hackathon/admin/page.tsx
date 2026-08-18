@@ -132,7 +132,26 @@ export default async function AdminPage() {
       </div>
 
       {/* ── Panels ─────────────────────────────────────────────── */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Link href="/hackathon/envelopes" className="block">
+          <HackCard tone="brand" interactive className="flex h-full flex-col gap-3">
+            <div className="flex items-start justify-between">
+              <IconTile name="mail" tone="brand" className="h-11 w-11" />
+              <ArrowUpRight className="h-4 w-4 text-zinc-500" />
+            </div>
+            <CardTitle as="h2" className="text-xl">
+              Envelope allocation
+            </CardTitle>
+            <CardBody>
+              Draw all twenty sealed briefs at once, or set any team by hand. Picking a taken
+              envelope swaps the two teams.
+            </CardBody>
+            <span className="mt-auto pt-2 text-[12px] text-zinc-500">
+              {stats.envelopesAssigned}/{stats.teams} assigned
+            </span>
+          </HackCard>
+        </Link>
+
         <Link href="/hackathon/manage" className="block">
           <HackCard tone="brand" interactive className="flex h-full flex-col gap-3">
             <div className="flex items-start justify-between">
@@ -143,7 +162,7 @@ export default async function AdminPage() {
               Manage teams &amp; results
             </CardTitle>
             <CardBody>
-              Edit rosters, assign sealed envelopes, enter each team&apos;s final score from the
+              Edit rosters, review submitted work, enter each team&apos;s final score from the
               paper sheet, upload the scan, and publish.
             </CardBody>
           </HackCard>

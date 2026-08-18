@@ -28,6 +28,7 @@ function revalidateHack() {
     "/hackathon",
     "/hackathon/admin",
     "/hackathon/manage",
+    "/hackathon/envelopes",
     "/hackathon/team",
     "/hackathon/leaderboard",
     "/hackathon/register",
@@ -130,18 +131,89 @@ export async function deleteTeamAction(_prev: unknown, formData: FormData) {
   return { success: `"${team.name}" and all its data were deleted.` };
 }
 
-/** Assign one of the 20 sealed envelopes to a team. */
-export async function assignEnvelopeAction(formData: FormData) {
+/* ─────────────────────────── Envelopes ─────────────────────────── */
+
+/**
+ * Postgres RAISE messages arrive prefixed with context; show just the sentence
+ * the function actually wrote for the organiser.
+ */
+function humanise(message: string) {
+  return message.replace(/^.*?:\s*/, "").trim() || "Something went wrong.";
+}
+
+/**
+ * Assign, swap or clear a team's sealed envelope.
+ *
+ * All the decision-making is in `hack_assign_envelope` (migration 0022), which
+ * holds an advisory lock for the duration — so two organisers working at once
+ * cannot both claim the same envelope, and a swap cannot momentarily violate
+ * the unique index. This used to be a bare UPDATE whose error was discarded,
+ * which meant a rejected assignment looked identical to a successful one.
+ */
+export async function assignEnvelopeAction(_prev: unknown, formData: FormData) {
   await requireAdmin();
   const teamId = String(formData.get("team_id") ?? "");
   const raw = String(formData.get("envelope_no") ?? "").trim();
-  if (!teamId) return;
+  if (!teamId) return { error: "Missing team." };
 
   const no = raw === "" ? null : Number(raw);
-  if (no !== null && (!Number.isInteger(no) || !ENVELOPES.some((e) => e.no === no))) return;
+  if (no !== null && (!Number.isInteger(no) || !ENVELOPES.some((e) => e.no === no))) {
+    return { error: "Pick a valid envelope." };
+  }
 
-  await createAdminClient().from("hack_teams").update({ envelope_no: no }).eq("id", teamId);
+  const { data, error } = await createAdminClient().rpc("hack_assign_envelope", {
+    p_team_id: teamId,
+    p_envelope_no: no,
+  });
+  if (error) return { error: humanise(error.message) };
+
   revalidateHack();
+
+  const r = data as { action: string; team: string; with?: string };
+  switch (r.action) {
+    case "cleared":
+      return { success: `Cleared ${r.team}'s envelope.` };
+    case "unchanged":
+      return { success: `${r.team} already had that envelope.` };
+    case "swapped":
+      return { success: `Swapped envelopes between ${r.team} and ${r.with}.` };
+    default:
+      return { success: `Assigned to ${r.team}.` };
+  }
+}
+
+/**
+ * Draw envelopes for every team that does not have one yet.
+ *
+ * This is the briefing-day operation: a fair random draw from whatever is
+ * still free, done in one transaction so it cannot half-complete.
+ */
+export async function drawEnvelopesAction(_prev: unknown, _formData: FormData) {
+  await requireAdmin();
+
+  const { data, error } = await createAdminClient().rpc("hack_draw_envelopes");
+  if (error) return { error: humanise(error.message) };
+
+  revalidateHack();
+
+  const r = data as { assigned: number; skipped: number };
+  if (r.assigned === 0 && r.skipped === 0) {
+    return { success: "Every team already has an envelope." };
+  }
+  const tail = r.skipped > 0 ? ` ${r.skipped} team(s) left over — only 20 envelopes exist.` : "";
+  return { success: `Drew ${r.assigned} envelope${r.assigned === 1 ? "" : "s"}.${tail}` };
+}
+
+/** Unassign every envelope — a reset before a fresh draw. */
+export async function clearEnvelopesAction(_prev: unknown, _formData: FormData) {
+  await requireAdmin();
+
+  const { data, error } = await createAdminClient().rpc("hack_clear_envelopes");
+  if (error) return { error: humanise(error.message) };
+
+  revalidateHack();
+  const r = data as { cleared: number };
+  return { success: `Cleared ${r.cleared} assignment${r.cleared === 1 ? "" : "s"}.` };
 }
 
 /* ─────────────────────────── Members ─────────────────────────── */

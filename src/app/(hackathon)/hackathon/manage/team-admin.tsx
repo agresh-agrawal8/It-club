@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Check, Download, Loader2, Trash2, Upload, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, Check, Download, Loader2, Trash2, Upload, UserPlus } from "lucide-react";
 import {
   addMemberAction,
-  assignEnvelopeAction,
   deleteTeamAction,
   removeMemberAction,
   saveResultAction,
@@ -18,16 +18,12 @@ import {
  *
  * Split into independent forms, each with its own action state, so a failure
  * in one (say a duplicate member) never discards what was typed into another.
- * Envelope options arrive as props rather than being imported from
- * `content.ts` — that keeps the sealed brief titles out of any shared client
- * chunk.
+ *
+ * The envelope is shown but not editable here — allocating twenty unique
+ * briefs is one sitting on a board where the whole picture is visible, so it
+ * lives at /hackathon/envelopes. The label arrives as a prop rather than being
+ * imported, keeping sealed brief titles out of this client chunk.
  */
-
-export interface EnvelopeOption {
-  no: number;
-  label: string;
-  takenBy: string | null;
-}
 
 export interface AdminMember {
   id: string;
@@ -98,13 +94,13 @@ export function TeamAdminCard({
   members,
   result,
   submission,
-  envelopes,
+  envelopeLabel,
 }: {
   team: AdminTeam;
   members: AdminMember[];
   result: AdminResult | null;
   submission: AdminSubmission | null;
-  envelopes: EnvelopeOption[];
+  envelopeLabel: string | null;
 }) {
   const [detailState, detailAction, detailPending] = useActionState(
     updateTeamDetailsAction,
@@ -288,33 +284,28 @@ export function TeamAdminCard({
         </Section>
 
         {/* ── Envelope ───────────────────────────────────────── */}
+        {/* Read-only here on purpose. Allocating twenty unique briefs is one
+            sitting, and it belongs on a screen where the whole board is
+            visible — see /hackathon/envelopes. */}
         <Section title="Sealed envelope">
-          <form action={assignEnvelopeAction} className="flex flex-wrap items-center gap-2">
-            <input type="hidden" name="team_id" value={team.id} />
-            <select
-              name="envelope_no"
-              defaultValue={team.envelope_no ?? ""}
-              className={`${FIELD} max-w-xs`}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {team.envelope_no != null ? (
+              <span className="rounded-full border border-brand-400/30 bg-brand-500/10 px-3 py-1 text-[12px] text-brand-200">
+                ENV-{String(team.envelope_no).padStart(2, "0")}
+                {envelopeLabel ? ` · ${envelopeLabel}` : ""}
+              </span>
+            ) : (
+              <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-[12px] text-amber-300">
+                Not assigned
+              </span>
+            )}
+            <Link
+              href="/hackathon/envelopes"
+              className="inline-flex items-center gap-1.5 text-[12.5px] text-brand-300 transition-colors hover:text-brand-200"
             >
-              <option value="" className="bg-zinc-900">
-                — Not assigned —
-              </option>
-              {envelopes.map((e) => (
-                <option
-                  key={e.no}
-                  value={e.no}
-                  disabled={e.takenBy != null && e.no !== team.envelope_no}
-                  className="bg-zinc-900"
-                >
-                  {e.label}
-                  {e.takenBy && e.no !== team.envelope_no ? ` — taken by ${e.takenBy}` : ""}
-                </option>
-              ))}
-            </select>
-            <button className="rounded-full border border-white/12 px-4 py-2 text-[13px] text-white transition-colors hover:border-brand-400/50">
-              Assign
-            </button>
-          </form>
+              Envelope allocation <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </Section>
 
         {/* ── Members ────────────────────────────────────────── */}

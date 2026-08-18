@@ -14,7 +14,7 @@ import {
   signSubmissionLinks,
 } from "@/lib/hackathon/data";
 import { publishAllResultsAction } from "@/lib/hackathon/actions";
-import { TeamAdminCard, type EnvelopeOption } from "./team-admin";
+import { TeamAdminCard } from "./team-admin";
 
 export const metadata: Metadata = { title: "Manage teams" };
 
@@ -38,18 +38,9 @@ export default async function ManagePage() {
   const resultByTeam = new Map(results.map((r) => [r.team_id, r]));
   const submissionByTeam = new Map(submissions.map((s) => [s.team_id, s]));
 
-  // Envelope labels include the brief title — organisers need it to assign a
-  // sensible problem — so they are built here, in a Server Component, and
-  // handed down as props. `briefs.ts` is server-only, so this is the only
-  // place the titles can be read at all.
-  const takenBy = new Map(
-    teams.filter((t) => t.envelope_no != null).map((t) => [t.envelope_no!, t.name]),
-  );
-  const envelopeOptions: EnvelopeOption[] = BRIEFS.map((b) => ({
-    no: b.no,
-    label: `${b.code} · ${b.domain} — ${b.title}`,
-    takenBy: takenBy.get(b.no) ?? null,
-  }));
+  // Read here, in a Server Component: `briefs.ts` is server-only, so a brief
+  // title can only ever be resolved on the server and handed down as a string.
+  const briefByNo = new Map(BRIEFS.map((b) => [b.no, b] as const));
 
   const entered = results.filter((r) => r.final_score != null).length;
   const published = results.filter((r) => r.published).length;
@@ -67,7 +58,7 @@ export default async function ManagePage() {
         eyebrow="Core team"
         icon="users"
         title="Manage Teams"
-        lead="Edit rosters, assign sealed envelopes, and record each team's offline result — the final value from the paper sheet, the judges' remarks, and a scan of the sheet itself."
+        lead="Edit rosters, review what each team handed in, and record its offline result — the final value from the paper sheet, the judges' remarks, and a scan of the sheet itself. Envelope allocation has its own board."
       />
 
       {/* ── Counters ───────────────────────────────────────────── */}
@@ -164,7 +155,11 @@ export default async function ManagePage() {
                   deckUrl: l?.deckUrl ?? null,
                 };
               })()}
-              envelopes={envelopeOptions}
+              envelopeLabel={
+                t.envelope_no != null
+                  ? (briefByNo.get(t.envelope_no)?.domain ?? null)
+                  : null
+              }
             />
           ))}
         </div>
