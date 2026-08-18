@@ -178,7 +178,11 @@ export interface StandingRow {
  */
 export async function getStandings(): Promise<StandingRow[]> {
   const [teams, results] = await Promise.all([getTeams(), getResults()]);
-  const byTeam = new Map(results.filter((r) => r.published).map((r) => [r.team_id, r]));
+  // A row can be published before a score is typed in; ranking a team at 0
+  // because of that would be worse than leaving it off the board.
+  const byTeam = new Map(
+    results.filter((r) => r.published && r.final_score != null).map((r) => [r.team_id, r]),
+  );
 
   const rows = teams
     .filter((t) => byTeam.has(t.id) && t.status !== "disqualified")
