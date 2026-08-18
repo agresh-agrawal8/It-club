@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Container } from "@/components/ui/container";
 import { Countdown } from "@/components/hackathon/countdown";
 import { Icon } from "@/components/hackathon/icons";
+import { SealedEnvelope } from "@/components/hackathon/visuals";
 import {
   CardBody,
   CardTitle,
@@ -50,9 +51,7 @@ export default function ProblemsPage() {
 
       {/* ── Sealed banner ──────────────────────────────────────── */}
       <HackCard tone="brand" className="flex flex-col items-center gap-5 py-10 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-brand-400/30 bg-brand-500/12">
-          <Icon name="lock" className="h-6 w-6 text-brand-300" />
-        </span>
+        <SealedEnvelope className="max-w-[300px]" />
         <div className="flex flex-col gap-2">
           <Eyebrow>Sealed until the reveal</Eyebrow>
           <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">

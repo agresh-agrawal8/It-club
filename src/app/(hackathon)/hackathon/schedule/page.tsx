@@ -3,6 +3,7 @@ import { Container } from "@/components/ui/container";
 import { Countdown } from "@/components/hackathon/countdown";
 import { Icon } from "@/components/hackathon/icons";
 import { CardBody, Eyebrow, HackCard, IconTile, SectionHead } from "@/components/hackathon/card";
+import { CurveChart, DayGrid, VisualWell } from "@/components/hackathon/visuals";
 import { EVENT, SCHEDULE, TRACK_LABEL, type ScheduleItem } from "@/lib/hackathon/content";
 
 export const metadata: Metadata = {
@@ -160,6 +161,37 @@ export default function SchedulePage() {
             <CardBody className="text-[12.5px]">{m.note}</CardBody>
           </HackCard>
         ))}
+      </div>
+
+      {/* ── The shape of the day ───────────────────────────────── */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <HackCard tone="brand" className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <IconTile name="cpu" tone="brand" className="h-9 w-9" />
+            <Eyebrow>The arc of the build</Eyebrow>
+          </div>
+          <CardBody>
+            Three sprints with a surprise task folded into the middle, then a final push to code
+            freeze at 2:15 PM sharp.
+          </CardBody>
+          <VisualWell>
+            <CurveChart badge="2:15 PM" caption="Build progress through the day" />
+          </VisualWell>
+        </HackCard>
+
+        <HackCard className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <IconTile name="message" className="h-9 w-9" />
+            <Eyebrow tone="default">Who is where</Eyebrow>
+          </div>
+          <CardBody>
+            The two quiz reps leave for Rounds 1 and 2 while the other three keep building, then
+            rejoin for the surprise task.
+          </CardBody>
+          <VisualWell>
+            <DayGrid />
+          </VisualWell>
+        </HackCard>
       </div>
 
       <p className="text-center text-[11px] uppercase tracking-[0.18em] text-zinc-600">

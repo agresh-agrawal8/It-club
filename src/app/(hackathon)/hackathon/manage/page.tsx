@@ -4,8 +4,15 @@ import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { CardBody, Eyebrow, HackCard, IconTile, SectionHead } from "@/components/hackathon/card";
 import { requireAdmin } from "@/lib/auth";
-import { ENVELOPES, EVENT } from "@/lib/hackathon/content";
-import { getMembers, getResults, getTeams } from "@/lib/hackathon/data";
+import { EVENT } from "@/lib/hackathon/content";
+import { BRIEFS } from "@/lib/hackathon/briefs";
+import {
+  getMembers,
+  getResults,
+  getSubmissions,
+  getTeams,
+  signSubmissionLinks,
+} from "@/lib/hackathon/data";
 import { publishAllResultsAction } from "@/lib/hackathon/actions";
 import { TeamAdminCard, type EnvelopeOption } from "./team-admin";
 
@@ -14,7 +21,13 @@ export const metadata: Metadata = { title: "Manage teams" };
 export default async function ManagePage() {
   await requireAdmin();
 
-  const [teams, members, results] = await Promise.all([getTeams(), getMembers(), getResults()]);
+  const [teams, members, results, submissions] = await Promise.all([
+    getTeams(),
+    getMembers(),
+    getResults(),
+    getSubmissions(),
+  ]);
+  const links = await signSubmissionLinks(submissions);
 
   const membersByTeam = new Map<string, typeof members>();
   for (const m of members) {
@@ -23,17 +36,19 @@ export default async function ManagePage() {
     membersByTeam.set(m.team_id, list);
   }
   const resultByTeam = new Map(results.map((r) => [r.team_id, r]));
+  const submissionByTeam = new Map(submissions.map((s) => [s.team_id, s]));
 
   // Envelope labels include the brief title — organisers need it to assign a
-  // sensible problem — so they are built here, in a server component, and
-  // handed down as props rather than importing content into the client.
+  // sensible problem — so they are built here, in a Server Component, and
+  // handed down as props. `briefs.ts` is server-only, so this is the only
+  // place the titles can be read at all.
   const takenBy = new Map(
     teams.filter((t) => t.envelope_no != null).map((t) => [t.envelope_no!, t.name]),
   );
-  const envelopeOptions: EnvelopeOption[] = ENVELOPES.map((e) => ({
-    no: e.no,
-    label: `${e.code} · ${e.domain} — ${e.title}`,
-    takenBy: takenBy.get(e.no) ?? null,
+  const envelopeOptions: EnvelopeOption[] = BRIEFS.map((b) => ({
+    no: b.no,
+    label: `${b.code} · ${b.domain} — ${b.title}`,
+    takenBy: takenBy.get(b.no) ?? null,
   }));
 
   const entered = results.filter((r) => r.final_score != null).length;
@@ -59,7 +74,10 @@ export default async function ManagePage() {
       <div className="grid gap-3 sm:grid-cols-4">
         {[
           { label: "Teams", value: `${teams.length}/${EVENT.maxTeams}` },
-          { label: "Members", value: String(members.length) },
+          {
+            label: "Submitted",
+            value: `${submissions.filter((s) => s.status === "submitted").length}/${teams.length}`,
+          },
           { label: "Scores entered", value: `${entered}/${teams.length}` },
           { label: "Published", value: `${published}/${teams.length}` },
         ].map((s) => (
@@ -131,6 +149,21 @@ export default async function ManagePage() {
                     }
                   : null
               }
+              submission={(() => {
+                const s = submissionByTeam.get(t.id);
+                if (!s) return null;
+                const l = links.get(t.id);
+                return {
+                  status: s.status,
+                  submittedAt: s.submitted_at,
+                  codeName: s.code_name,
+                  deckName: s.deck_name,
+                  repoUrl: s.repo_url,
+                  notes: s.notes,
+                  codeUrl: l?.codeUrl ?? null,
+                  deckUrl: l?.deckUrl ?? null,
+                };
+              })()}
               envelopes={envelopeOptions}
             />
           ))}

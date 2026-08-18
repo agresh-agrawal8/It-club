@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { CardBody, Eyebrow, HackCard, IconTile, SectionHead } from "@/components/hackathon/card";
+import { TeamOrbit, VisualWell } from "@/components/hackathon/visuals";
 import { EVENT, QUIZ_REPS_REQUIRED } from "@/lib/hackathon/content";
 import { getTeamCount } from "@/lib/hackathon/data";
 import { RegisterForm } from "./register-form";
@@ -97,6 +98,9 @@ export default async function RegisterPage() {
               <li>• A student can only be on one team.</li>
               <li>• Team names must be unique.</li>
             </ul>
+            <VisualWell pad={false} className="px-2 pt-1">
+              <TeamOrbit />
+            </VisualWell>
           </HackCard>
 
           <HackCard className="flex flex-col gap-3">

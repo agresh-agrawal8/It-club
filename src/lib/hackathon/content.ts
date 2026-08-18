@@ -614,42 +614,37 @@ export interface Envelope {
   no: number;
   code: string;
   domain: string;
-  /**
-   * Kept server-side for the organiser console only. Titles are deliberately
-   * NOT rendered on any public page — every brief stays sealed until 9:20 AM
-   * on event day.
-   */
-  title: string;
 }
 
 /**
- * The 20 problem envelopes from `Problems.pdf`.
+ * The 20 problem envelopes — public metadata only.
  *
- * Only `domain` is ever shown publicly, and only as a list of the fields the
- * event covers. The titles exist here so the core team can assign a unique
- * envelope per team in the admin console — never for display to participants.
+ * Deliberately just the domain. Brief titles and contents live in
+ * `briefs.ts`, which is marked `server-only`: this file is imported by client
+ * components (the registration form), so anything here can end up in a browser
+ * bundle, and a sealed brief must never be one bundle-inspection away.
  */
 export const ENVELOPES: Envelope[] = [
-  { no: 1, code: "ENV-01", domain: "Healthcare", title: "BloodLink" },
-  { no: 2, code: "ENV-02", domain: "Education", title: "StudyForge" },
-  { no: 3, code: "ENV-03", domain: "Environment", title: "SortRight" },
-  { no: 4, code: "ENV-04", domain: "Agriculture", title: "CropGuard" },
-  { no: 5, code: "ENV-05", domain: "Disaster Management", title: "ReliefMap" },
-  { no: 6, code: "ENV-06", domain: "Accessibility", title: "AccessPath" },
-  { no: 7, code: "ENV-07", domain: "Cyber Safety", title: "PhishGuard" },
-  { no: 8, code: "ENV-08", domain: "Finance", title: "PocketWise" },
-  { no: 9, code: "ENV-09", domain: "Food Waste", title: "PlateShare" },
-  { no: 10, code: "ENV-10", domain: "Mental Health", title: "MindEase" },
-  { no: 11, code: "ENV-11", domain: "Transportation", title: "BusTrack" },
-  { no: 12, code: "ENV-12", domain: "Women Safety", title: "SafeRoute" },
-  { no: 13, code: "ENV-13", domain: "Smart City", title: "CivicFix" },
-  { no: 14, code: "ENV-14", domain: "Tourism", title: "HeritageQR" },
-  { no: 15, code: "ENV-15", domain: "Wildlife", title: "RescueLink" },
-  { no: 16, code: "ENV-16", domain: "Energy", title: "WattWise" },
-  { no: 17, code: "ENV-17", domain: "Community Service", title: "VolunteerConnect" },
-  { no: 18, code: "ENV-18", domain: "Sports", title: "FixturePro" },
-  { no: 19, code: "ENV-19", domain: "Public Safety", title: "FoundIt" },
-  { no: 20, code: "ENV-20", domain: "Space Technology", title: "MarsBase" },
+  { no: 1, code: "ENV-01", domain: "Healthcare" },
+  { no: 2, code: "ENV-02", domain: "Education" },
+  { no: 3, code: "ENV-03", domain: "Environment" },
+  { no: 4, code: "ENV-04", domain: "Agriculture" },
+  { no: 5, code: "ENV-05", domain: "Disaster Management" },
+  { no: 6, code: "ENV-06", domain: "Accessibility" },
+  { no: 7, code: "ENV-07", domain: "Cyber Safety" },
+  { no: 8, code: "ENV-08", domain: "Finance" },
+  { no: 9, code: "ENV-09", domain: "Food Waste" },
+  { no: 10, code: "ENV-10", domain: "Mental Health" },
+  { no: 11, code: "ENV-11", domain: "Transportation" },
+  { no: 12, code: "ENV-12", domain: "Women Safety" },
+  { no: 13, code: "ENV-13", domain: "Smart City" },
+  { no: 14, code: "ENV-14", domain: "Tourism" },
+  { no: 15, code: "ENV-15", domain: "Wildlife" },
+  { no: 16, code: "ENV-16", domain: "Energy" },
+  { no: 17, code: "ENV-17", domain: "Community Service" },
+  { no: 18, code: "ENV-18", domain: "Sports" },
+  { no: 19, code: "ENV-19", domain: "Public Safety" },
+  { no: 20, code: "ENV-20", domain: "Space Technology" },
 ];
 
 /** What every brief contains, and what every team hands back. */

@@ -5,6 +5,13 @@ import { Countdown } from "@/components/hackathon/countdown";
 import { Icon } from "@/components/hackathon/icons";
 import { PassportCard } from "@/components/hackathon/achievement-card";
 import {
+  CurveChart,
+  DayGrid,
+  PanelStack,
+  TeamOrbit,
+  VisualWell,
+} from "@/components/hackathon/visuals";
+import {
   CardBody,
   CardTitle,
   CheckRow,
@@ -197,6 +204,63 @@ export default function HackathonHome() {
               </div>
             </HackCard>
           </div>
+        </Container>
+      </section>
+
+      {/* ═══════════════════════ SHOWCASE ═══════════════════════ */}
+      <section className="border-t border-white/[0.06] py-16 md:py-20">
+        <Container className="grid gap-4 md:grid-cols-2">
+          <HackCard tone="brand" className="flex flex-col gap-4">
+            <CardTitle as="h2" className="text-xl">
+              One Sealed Envelope
+            </CardTitle>
+            <CardBody className="max-w-md">
+              Every team opens its own problem at 9:20 AM — a different real-world brief for each of
+              the {EVENT.maxTeams} teams, so nothing can be copied.
+            </CardBody>
+            <VisualWell>
+              <PanelStack />
+            </VisualWell>
+          </HackCard>
+
+          <HackCard className="flex flex-col gap-4">
+            <CardTitle as="h2" className="text-xl">
+              The Arc of the Day
+            </CardTitle>
+            <CardBody className="max-w-md">
+              Plan, three build sprints, a surprise task, then final polish — one continuous push
+              from 8:30 AM to code freeze at 2:15.
+            </CardBody>
+            <VisualWell>
+              <CurveChart badge="2:15 PM" caption="The build day, start to freeze" />
+            </VisualWell>
+          </HackCard>
+
+          <HackCard className="flex flex-col gap-4">
+            <CardTitle as="h2" className="text-xl">
+              Two Tracks at Once
+            </CardTitle>
+            <CardBody className="max-w-md">
+              While three members keep building, your two quiz reps step out for their rounds and
+              rejoin. Nobody sits idle.
+            </CardBody>
+            <VisualWell>
+              <DayGrid />
+            </VisualWell>
+          </HackCard>
+
+          <HackCard tone="brand" className="flex flex-col gap-4">
+            <CardTitle as="h2" className="text-xl">
+              Five Roles, One Team
+            </CardTitle>
+            <CardBody className="max-w-md">
+              Captain, frontend, backend, UI/UX and docs. Every role is owned by someone — and
+              everyone understands the whole project.
+            </CardBody>
+            <VisualWell pad={false} className="px-4 pt-2">
+              <TeamOrbit />
+            </VisualWell>
+          </HackCard>
         </Container>
       </section>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Check, Loader2, Trash2, Upload, UserPlus } from "lucide-react";
+import { Check, Download, Loader2, Trash2, Upload, UserPlus } from "lucide-react";
 import {
   addMemberAction,
   assignEnvelopeAction,
@@ -54,6 +54,17 @@ export interface AdminResult {
   published: boolean;
 }
 
+export interface AdminSubmission {
+  status: "draft" | "submitted";
+  submittedAt: string | null;
+  codeName: string | null;
+  deckName: string | null;
+  repoUrl: string | null;
+  notes: string | null;
+  codeUrl: string | null;
+  deckUrl: string | null;
+}
+
 const FIELD =
   "w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[13px] text-white placeholder:text-zinc-600 transition-colors focus:border-brand-400/60 focus:outline-none";
 const LABEL = "text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-500";
@@ -86,11 +97,13 @@ export function TeamAdminCard({
   team,
   members,
   result,
+  submission,
   envelopes,
 }: {
   team: AdminTeam;
   members: AdminMember[];
   result: AdminResult | null;
+  submission: AdminSubmission | null;
   envelopes: EnvelopeOption[];
 }) {
   const [detailState, detailAction, detailPending] = useActionState(
@@ -135,6 +148,71 @@ export function TeamAdminCard({
       </summary>
 
       <div className="flex flex-col gap-4 px-5 pb-5">
+        {/* ── Submission ─────────────────────────────────────── */}
+        <Section title="Submitted project">
+          {submission ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.1em] ${
+                    submission.status === "submitted"
+                      ? "border-accent-400/30 bg-accent-500/10 text-accent-400"
+                      : "border-amber-400/30 bg-amber-500/10 text-amber-300"
+                  }`}
+                >
+                  {submission.status}
+                </span>
+                {submission.submittedAt && (
+                  <span className="text-[11.5px] text-zinc-500">
+                    {new Date(submission.submittedAt).toLocaleString()}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {submission.codeUrl && (
+                  <a
+                    href={submission.codeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-1.5 text-[12px] text-zinc-300 transition-colors hover:border-brand-400/50 hover:text-white"
+                  >
+                    <Download className="h-3.5 w-3.5" /> {submission.codeName ?? "Code"}
+                  </a>
+                )}
+                {submission.deckUrl && (
+                  <a
+                    href={submission.deckUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-1.5 text-[12px] text-zinc-300 transition-colors hover:border-brand-400/50 hover:text-white"
+                  >
+                    <Download className="h-3.5 w-3.5" /> {submission.deckName ?? "Pitch deck"}
+                  </a>
+                )}
+                {submission.repoUrl && (
+                  <a
+                    href={submission.repoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/12 px-3 py-1.5 text-[12px] text-zinc-300 transition-colors hover:border-brand-400/50 hover:text-white"
+                  >
+                    Repository
+                  </a>
+                )}
+              </div>
+
+              {submission.notes && (
+                <p className="whitespace-pre-wrap rounded-lg border border-white/[0.06] bg-black/25 p-3 text-[12.5px] leading-relaxed text-zinc-400">
+                  {submission.notes}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-[12.5px] text-zinc-600">Nothing submitted yet.</p>
+          )}
+        </Section>
+
         {/* ── Result ─────────────────────────────────────────── */}
         <Section title="Achievement Card — offline result">
           <form action={resultAction} className="flex flex-col gap-3">

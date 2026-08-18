@@ -83,6 +83,30 @@ export interface Announcement {
   created_at: string;
 }
 
+export interface Submission {
+  team_id: string;
+  code_path: string | null;
+  code_name: string | null;
+  code_size: number | null;
+  deck_path: string | null;
+  deck_name: string | null;
+  deck_size: number | null;
+  repo_url: string | null;
+  notes: string | null;
+  status: "draft" | "submitted";
+  submitted_at: string | null;
+  updated_at: string;
+}
+
+/** The two switches the core team flips during the day. */
+export interface HackConfig {
+  briefs_released: boolean;
+  submissions_open: boolean;
+}
+
+const SUBMISSION_COLUMNS =
+  "team_id,code_path,code_name,code_size,deck_path,deck_name,deck_size,repo_url,notes,status,submitted_at,updated_at";
+
 const TEAM_COLUMNS = "id,name,team_code,team_no,tagline,school,status,envelope_no,created_at";
 const MEMBER_COLUMNS = "id,name,class_section,member_role,is_quiz_rep,team_id";
 
@@ -139,6 +163,38 @@ export const getResults = publicRead<Result[]>(
       return (data ?? []) as Result[];
     }, []),
   30,
+);
+
+export const getSubmissions = publicRead<Submission[]>(
+  "hack-submissions",
+  async () =>
+    safe(async () => {
+      const { data } = await createAdminClient()
+        .from("hack_submissions")
+        .select(SUBMISSION_COLUMNS);
+      return (data ?? []) as Submission[];
+    }, []),
+  15,
+);
+
+/**
+ * The day switches.
+ *
+ * Defaults to everything closed: if the row or table is somehow unreachable,
+ * the safe answer is that briefs stay sealed and submissions stay shut, not
+ * that the whole event opens up.
+ */
+export const getConfig = publicRead<HackConfig>(
+  "hack-config",
+  async () =>
+    safe(async () => {
+      const { data } = await createAdminClient()
+        .from("hack_config")
+        .select("briefs_released,submissions_open")
+        .maybeSingle();
+      return (data as HackConfig | null) ?? { briefs_released: false, submissions_open: false };
+    }, { briefs_released: false, submissions_open: false }),
+  15,
 );
 
 /**
@@ -213,11 +269,16 @@ export interface TeamPortalData {
   team: Team;
   members: Member[];
   result: Result | null;
+  submission: Submission | null;
+  config: HackConfig;
   /** Short-lived signed URL for the scanned sheet, or null. */
   sheetUrl: string | null;
+  /** Short-lived signed URLs for whatever the team has handed in. */
+  codeUrl: string | null;
+  deckUrl: string | null;
 }
 
-/** How long a scanned-sheet link stays valid. */
+/** How long a signed file link stays valid. */
 const SHEET_URL_TTL_S = 60 * 10;
 
 /**
@@ -231,7 +292,7 @@ export const getTeamPortal = cache(async (teamId: string): Promise<TeamPortalDat
   if (!hasServiceRole()) return null;
   const supabase = createAdminClient();
 
-  const [teamRes, membersRes, resultRes] = await Promise.all([
+  const [teamRes, membersRes, resultRes, submissionRes, config] = await Promise.all([
     supabase.from("hack_teams").select(TEAM_COLUMNS).eq("id", teamId).maybeSingle(),
     supabase
       .from("hack_participants")
@@ -243,28 +304,39 @@ export const getTeamPortal = cache(async (teamId: string): Promise<TeamPortalDat
       .select("team_id,final_score,remarks,sheet_path,published,updated_at")
       .eq("team_id", teamId)
       .maybeSingle(),
+    supabase.from("hack_submissions").select(SUBMISSION_COLUMNS).eq("team_id", teamId).maybeSingle(),
+    getConfig(),
   ]);
 
   const team = teamRes.data as Team | null;
   if (!team) return null;
 
   const result = (resultRes.data as Result | null) ?? null;
+  const submission = (submissionRes.data as Submission | null) ?? null;
 
-  // The bucket is private, so the scan is handed over as a signed URL that
-  // expires. A public URL would be guessable and permanent.
-  let sheetUrl: string | null = null;
-  if (result?.published && result.sheet_path) {
-    const { data } = await supabase.storage
-      .from("hack-sheets")
-      .createSignedUrl(result.sheet_path, SHEET_URL_TTL_S);
-    sheetUrl = data?.signedUrl ?? null;
-  }
+  // Both buckets are private, so files are handed over as signed URLs that
+  // expire. A public URL would be guessable and permanent.
+  const signed = async (bucket: string, path: string | null | undefined) => {
+    if (!path) return null;
+    const { data } = await supabase.storage.from(bucket).createSignedUrl(path, SHEET_URL_TTL_S);
+    return data?.signedUrl ?? null;
+  };
+
+  const [sheetUrl, codeUrl, deckUrl] = await Promise.all([
+    result?.published ? signed("hack-sheets", result.sheet_path) : Promise.resolve(null),
+    signed("hack-submissions", submission?.code_path),
+    signed("hack-submissions", submission?.deck_path),
+  ]);
 
   return {
     team,
     members: (membersRes.data ?? []) as Member[],
     result,
+    submission,
+    config,
     sheetUrl,
+    codeUrl,
+    deckUrl,
   };
 });
 
@@ -286,6 +358,34 @@ export async function findTeamByName(name: string): Promise<Team | null> {
     .maybeSingle();
 
   return (data as Team | null) ?? null;
+}
+
+/**
+ * Signed download links for everything teams have handed in.
+ *
+ * Not cached: the URLs expire, so a shared cache entry would hand organisers
+ * dead links a few minutes later.
+ */
+export async function signSubmissionLinks(
+  submissions: Submission[],
+): Promise<Map<string, { codeUrl: string | null; deckUrl: string | null }>> {
+  const out = new Map<string, { codeUrl: string | null; deckUrl: string | null }>();
+  if (!hasServiceRole() || submissions.length === 0) return out;
+
+  const storage = createAdminClient().storage.from("hack-submissions");
+  const sign = async (path: string | null) => {
+    if (!path) return null;
+    const { data } = await storage.createSignedUrl(path, SHEET_URL_TTL_S);
+    return data?.signedUrl ?? null;
+  };
+
+  await Promise.all(
+    submissions.map(async (s) => {
+      const [codeUrl, deckUrl] = await Promise.all([sign(s.code_path), sign(s.deck_path)]);
+      out.set(s.team_id, { codeUrl, deckUrl });
+    }),
+  );
+  return out;
 }
 
 /* ─────────────────────────── Admin overview ─────────────────────────── */

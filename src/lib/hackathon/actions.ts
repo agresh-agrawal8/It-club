@@ -410,3 +410,31 @@ export async function publishAllResultsAction() {
     .not("final_score", "is", null);
   revalidateHack();
 }
+
+/* ─────────────────────────── Day switches ─────────────────────────── */
+
+/**
+ * The two levers the core team pulls on the day.
+ *
+ * `briefs_released` gates whether a team's sealed problem text is assembled at
+ * all — before it flips, the brief never leaves the server. `submissions_open`
+ * gates both the upload ticket and the save, so closing it at code freeze
+ * genuinely stops late hand-ins rather than merely hiding the form.
+ */
+async function setConfig(patch: Record<string, unknown>) {
+  await requireAdmin();
+  await createAdminClient()
+    .from("hack_config")
+    .upsert({ id: true, ...patch, updated_at: new Date().toISOString() }, { onConflict: "id" });
+  revalidateHack();
+}
+
+export async function toggleBriefsReleasedAction(formData: FormData) {
+  const released = formData.get("released") === "true";
+  await setConfig({ briefs_released: !released });
+}
+
+export async function toggleSubmissionsOpenAction(formData: FormData) {
+  const open = formData.get("open") === "true";
+  await setConfig({ submissions_open: !open });
+}

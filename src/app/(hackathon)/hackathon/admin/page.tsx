@@ -13,15 +13,23 @@ import {
 } from "@/components/hackathon/card";
 import { requireAdmin } from "@/lib/auth";
 import { EVENT } from "@/lib/hackathon/content";
-import { getAdminStats, getAnnouncements } from "@/lib/hackathon/data";
-import { deleteAnnouncementAction } from "@/lib/hackathon/actions";
+import { getAdminStats, getAnnouncements, getConfig } from "@/lib/hackathon/data";
+import {
+  deleteAnnouncementAction,
+  toggleBriefsReleasedAction,
+  toggleSubmissionsOpenAction,
+} from "@/lib/hackathon/actions";
 
 export const metadata: Metadata = { title: "Admin console" };
 
 export default async function AdminPage() {
   await requireAdmin();
 
-  const [stats, announcements] = await Promise.all([getAdminStats(), getAnnouncements()]);
+  const [stats, announcements, config] = await Promise.all([
+    getAdminStats(),
+    getAnnouncements(),
+    getConfig(),
+  ]);
 
   const counters = [
     { label: "Teams registered", value: `${stats.teams}/${EVENT.maxTeams}`, icon: "users" },
@@ -56,6 +64,71 @@ export default async function AdminPage() {
             <Eyebrow tone="default">{c.label}</Eyebrow>
           </HackCard>
         ))}
+      </div>
+
+      {/* ── Day switches ───────────────────────────────────────── */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <HackCard tone={config.briefs_released ? "accent" : "default"} className="flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <IconTile
+                name={config.briefs_released ? "mail" : "lock"}
+                tone={config.briefs_released ? "accent" : "brand"}
+                className="h-9 w-9"
+              />
+              <div className="flex flex-col gap-1">
+                <CardTitle>Sealed briefs</CardTitle>
+                <CardBody>
+                  {config.briefs_released
+                    ? "Released. Every team can now read its full problem brief in its portal."
+                    : "Sealed. Teams see only their domain — the brief text never leaves the server."}
+                </CardBody>
+              </div>
+            </div>
+          </div>
+          <form action={toggleBriefsReleasedAction} className="mt-auto">
+            <input type="hidden" name="released" value={String(config.briefs_released)} />
+            <button
+              className={`w-full rounded-full px-5 py-2.5 text-[13px] font-medium transition-opacity hover:opacity-90 ${
+                config.briefs_released
+                  ? "border border-white/12 text-white"
+                  : "bg-brand-600 text-white"
+              }`}
+            >
+              {config.briefs_released ? "Re-seal briefs" : "Release briefs (9:20 AM)"}
+            </button>
+          </form>
+        </HackCard>
+
+        <HackCard tone={config.submissions_open ? "amber" : "default"} className="flex flex-col gap-4">
+          <div className="flex items-start gap-3">
+            <IconTile
+              name={config.submissions_open ? "send" : "lock"}
+              tone={config.submissions_open ? "amber" : "brand"}
+              className="h-9 w-9"
+            />
+            <div className="flex flex-col gap-1">
+              <CardTitle>Submission window</CardTitle>
+              <CardBody>
+                {config.submissions_open
+                  ? "Open. Teams can upload their pitch deck and code from their portal."
+                  : "Closed. Uploads are rejected server-side, not just hidden."}
+              </CardBody>
+            </div>
+          </div>
+          <form action={toggleSubmissionsOpenAction} className="mt-auto">
+            <input type="hidden" name="open" value={String(config.submissions_open)} />
+            <button
+              className={`w-full rounded-full px-5 py-2.5 text-[13px] font-medium transition-opacity hover:opacity-90 ${
+                config.submissions_open
+                  ? "border border-white/12 text-white"
+                  : "bg-amber-500 text-black"
+              }`}
+            >
+              {config.submissions_open ? "Close at code freeze" : "Open submissions"}
+            </button>
+          </form>
+        </HackCard>
       </div>
 
       {/* ── Panels ─────────────────────────────────────────────── */}

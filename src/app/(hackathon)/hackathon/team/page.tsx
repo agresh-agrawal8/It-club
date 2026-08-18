@@ -20,10 +20,14 @@ import {
   envelopeByNo,
   type MemberRole,
 } from "@/lib/hackathon/content";
+import { briefByNo } from "@/lib/hackathon/briefs";
 import { getAnnouncements, getTeamPortal } from "@/lib/hackathon/data";
 import { getTeamSessionId } from "@/lib/hackathon/session";
 import { closePortalAction } from "@/lib/hackathon/portal-actions";
+import { BriefView } from "@/components/hackathon/brief-view";
+import { SealedEnvelope } from "@/components/hackathon/visuals";
 import { PortalForm } from "./portal-form";
+import { SubmissionForm } from "./submission-form";
 
 export const metadata: Metadata = {
   title: "Team portal",
@@ -72,11 +76,16 @@ export default async function TeamPortalPage() {
     );
   }
 
-  const { team, members, result, sheetUrl } = portal;
+  const { team, members, result, submission, config, sheetUrl, codeUrl, deckUrl } = portal;
   const envelope = envelopeByNo(team.envelope_no);
   const announcements = await getAnnouncements();
   const published = Boolean(result?.published);
   const quizReps = members.filter((m) => m.is_quiz_rep);
+
+  // The brief is only assembled once the core team has released it. Before
+  // that the full text never leaves the server, so there is nothing in the
+  // page for a curious team to dig out early.
+  const brief = config.briefs_released ? briefByNo(team.envelope_no) : null;
 
   return (
     <Container className="flex flex-col gap-6 py-10 md:gap-8">
@@ -186,39 +195,131 @@ export default async function TeamPortalPage() {
             )}
           </HackCard>
 
-          {/* ── Envelope ───────────────────────────────────────── */}
-          <HackCard className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <IconTile name="mail" className="h-9 w-9" />
-                <Eyebrow tone="default">Your problem envelope</Eyebrow>
+          {/* ── Problem brief ──────────────────────────────────── */}
+          {brief ? (
+            <BriefView brief={brief} />
+          ) : (
+            <HackCard tone="brand" bare className="overflow-hidden">
+              <div className="flex items-center justify-between gap-3 border-b border-white/[0.07] px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <IconTile name="mail" tone="brand" className="h-9 w-9" />
+                  <Eyebrow>Your problem envelope</Eyebrow>
+                </div>
+                {envelope && (
+                  <span className="font-mono text-[11px] text-zinc-500">{envelope.code}</span>
+                )}
               </div>
-              {envelope && (
-                <span className="font-mono text-[11px] text-zinc-500">{envelope.code}</span>
+
+              <div className="flex flex-col items-center gap-4 px-6 py-8 text-center">
+                <SealedEnvelope className="max-w-[280px]" />
+                {envelope ? (
+                  <>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <span className="rounded-full border border-brand-400/30 bg-brand-500/10 px-3 py-1 text-[12px] text-brand-200">
+                        {envelope.domain}
+                      </span>
+                      <span className="text-[12px] text-zinc-500">
+                        Envelope {String(envelope.no).padStart(2, "0")} of {EVENT.maxTeams}
+                      </span>
+                    </div>
+                    <CardBody className="max-w-md">
+                      Your domain is assigned, but the brief itself stays sealed until{" "}
+                      <strong className="font-medium text-white">9:20 AM</strong> on event day. It
+                      appears here in full the moment the hall opens its envelopes together.
+                    </CardBody>
+                  </>
+                ) : (
+                  <CardBody className="max-w-md">
+                    No envelope assigned yet — the core team assigns each team a unique problem
+                    before the briefing.
+                  </CardBody>
+                )}
+              </div>
+            </HackCard>
+          )}
+
+          {/* ── Submission ─────────────────────────────────────── */}
+          <HackCard tone={submission?.status === "submitted" ? "accent" : "default"} bare>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.07] px-6 py-4">
+              <div className="flex items-center gap-3">
+                <IconTile
+                  name="send"
+                  tone={submission?.status === "submitted" ? "accent" : "brand"}
+                  className="h-9 w-9"
+                />
+                <div className="flex flex-col">
+                  <Eyebrow tone={submission?.status === "submitted" ? "accent" : "brand"}>
+                    Submit your project
+                  </Eyebrow>
+                  <span className="text-[12px] text-zinc-500">Pitch deck and code, together</span>
+                </div>
+              </div>
+              <span
+                className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.12em] ${
+                  submission?.status === "submitted"
+                    ? "border-accent-400/30 bg-accent-500/10 text-accent-300"
+                    : config.submissions_open
+                      ? "border-amber-400/30 bg-amber-500/10 text-amber-300"
+                      : "border-white/10 text-zinc-500"
+                }`}
+              >
+                {submission?.status === "submitted"
+                  ? "Submitted"
+                  : config.submissions_open
+                    ? "Open"
+                    : "Not open"}
+              </span>
+            </div>
+
+            <div className="p-6">
+              <SubmissionForm
+                open={config.submissions_open}
+                submission={
+                  submission
+                    ? {
+                        code_name: submission.code_name,
+                        code_size: submission.code_size,
+                        deck_name: submission.deck_name,
+                        deck_size: submission.deck_size,
+                        repo_url: submission.repo_url,
+                        notes: submission.notes,
+                        status: submission.status,
+                        submitted_at: submission.submitted_at,
+                      }
+                    : null
+                }
+              />
+
+              {(codeUrl || deckUrl) && (
+                <div className="mt-5 flex flex-wrap gap-2 border-t border-white/[0.07] pt-5">
+                  <span className="w-full text-[10px] uppercase tracking-[0.14em] text-zinc-600">
+                    On file
+                  </span>
+                  {codeUrl && (
+                    <a
+                      href={codeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/12 px-3.5 py-1.5 text-[12px] text-zinc-300 transition-colors hover:border-brand-400/40 hover:text-white"
+                    >
+                      <Icon name="archive" className="h-3.5 w-3.5" />
+                      {submission?.code_name ?? "Code"}
+                    </a>
+                  )}
+                  {deckUrl && (
+                    <a
+                      href={deckUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/12 px-3.5 py-1.5 text-[12px] text-zinc-300 transition-colors hover:border-brand-400/40 hover:text-white"
+                    >
+                      <Icon name="deck" className="h-3.5 w-3.5" />
+                      {submission?.deck_name ?? "Pitch deck"}
+                    </a>
+                  )}
+                </div>
               )}
             </div>
-            {envelope ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-brand-400/30 bg-brand-500/10 px-3 py-1 text-[12px] text-brand-200">
-                    {envelope.domain}
-                  </span>
-                  <span className="text-[12px] text-zinc-500">
-                    Envelope {String(envelope.no).padStart(2, "0")} of {EVENT.maxTeams}
-                  </span>
-                </div>
-                <CardBody>
-                  Your domain is assigned, but the brief itself stays sealed until{" "}
-                  <strong className="font-medium text-white">9:20 AM</strong> on event day. Do not
-                  start building before the reveal.
-                </CardBody>
-              </div>
-            ) : (
-              <CardBody>
-                No envelope assigned yet — the core team assigns each team a unique problem before
-                the briefing.
-              </CardBody>
-            )}
           </HackCard>
 
           {/* ── Roster ─────────────────────────────────────────── */}
@@ -260,6 +361,11 @@ export default async function TeamPortalPage() {
                 </li>
               ))}
             </ul>
+            <p className="flex items-start gap-2 border-t border-white/[0.06] pt-3 text-[11.5px] leading-relaxed text-zinc-500">
+              <Icon name="lock" className="mt-[2px] h-3.5 w-3.5 shrink-0" />
+              Team and member details are managed by the core team. If something here is wrong,
+              speak to the Organizing Committee — you cannot edit it yourself.
+            </p>
           </HackCard>
         </div>
 
