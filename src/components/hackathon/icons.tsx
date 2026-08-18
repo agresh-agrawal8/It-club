@@ -1,0 +1,133 @@
+import {
+  Accessibility,
+  ArrowUpRight,
+  Award,
+  Blocks,
+  Box,
+  Bug,
+  Calendar,
+  Check,
+  ClipboardList,
+  Clock,
+  Compass,
+  Cpu,
+  Crown,
+  Database,
+  Eye,
+  FileText,
+  FlaskConical,
+  Gauge,
+  GitBranch,
+  GitCommitVertical,
+  GitMerge,
+  Globe,
+  GraduationCap,
+  Hammer,
+  LayoutTemplate,
+  Lightbulb,
+  List,
+  Lock,
+  Mail,
+  MapPin,
+  Megaphone,
+  MessageSquare,
+  Mic,
+  Monitor,
+  Moon,
+  PenLine,
+  Plus,
+  Power,
+  RefreshCw,
+  Save,
+  Scale,
+  Server,
+  Shield,
+  ShieldCheck,
+  Shuffle,
+  Smartphone,
+  Sparkles,
+  Table,
+  Target,
+  Ticket,
+  Trophy,
+  Usb,
+  Users,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+/**
+ * Icon registry.
+ *
+ * Content in `content.ts` refers to icons by name so the data stays plain and
+ * serialisable. Every icon the event uses is listed here explicitly — an
+ * import map rather than a dynamic lookup, so the bundler can still tree-shake
+ * and we never ship the whole lucide set.
+ */
+export const ICONS = {
+  accessibility: Accessibility,
+  arrow: ArrowUpRight,
+  award: Award,
+  blocks: Blocks,
+  box: Box,
+  bug: Bug,
+  calendar: Calendar,
+  cap: GraduationCap,
+  check: Check,
+  clipboard: ClipboardList,
+  clock: Clock,
+  compass: Compass,
+  cpu: Cpu,
+  crown: Crown,
+  database: Database,
+  eye: Eye,
+  file: FileText,
+  flask: FlaskConical,
+  gauge: Gauge,
+  "git-branch": GitBranch,
+  "git-commit": GitCommitVertical,
+  "git-merge": GitMerge,
+  globe: Globe,
+  hammer: Hammer,
+  layout: LayoutTemplate,
+  lightbulb: Lightbulb,
+  list: List,
+  lock: Lock,
+  mail: Mail,
+  megaphone: Megaphone,
+  message: MessageSquare,
+  mic: Mic,
+  monitor: Monitor,
+  moon: Moon,
+  pen: PenLine,
+  pin: MapPin,
+  plus: Plus,
+  power: Power,
+  refresh: RefreshCw,
+  save: Save,
+  scale: Scale,
+  server: Server,
+  shield: Shield,
+  "shield-check": ShieldCheck,
+  shuffle: Shuffle,
+  smartphone: Smartphone,
+  sparkles: Sparkles,
+  table: Table,
+  target: Target,
+  ticket: Ticket,
+  trophy: Trophy,
+  usb: Usb,
+  users: Users,
+} satisfies Record<string, LucideIcon>;
+
+export type IconName = keyof typeof ICONS;
+
+export function Icon({
+  name,
+  className = "h-4 w-4",
+}: {
+  name: string;
+  className?: string;
+}) {
+  const Cmp = ICONS[name as IconName] ?? Sparkles;
+  return <Cmp className={className} aria-hidden />;
+}

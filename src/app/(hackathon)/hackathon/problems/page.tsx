@@ -1,93 +1,160 @@
 import type { Metadata } from "next";
-import { FileText, Lock, Download, Clock } from "lucide-react";
 import { Container } from "@/components/ui/container";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
 import { Countdown } from "@/components/hackathon/countdown";
-import { getProblems } from "@/lib/hackathon/data";
+import { Icon } from "@/components/hackathon/icons";
+import {
+  CardBody,
+  CardTitle,
+  CheckRow,
+  Eyebrow,
+  HackCard,
+  IconTile,
+  SectionHead,
+} from "@/components/hackathon/card";
+import {
+  BRIEF_SECTIONS,
+  DELIVERABLES,
+  ENVELOPES,
+  ENVELOPE_CONTENTS,
+  EVENT,
+} from "@/lib/hackathon/content";
 
-export const metadata: Metadata = { title: "Problem statements" };
-
-const difficultyVariant: Record<string, "success" | "warning" | "danger" | "small"> = {
-  easy: "success",
-  medium: "warning",
-  hard: "danger",
+export const metadata: Metadata = {
+  title: "Sealed envelopes",
+  description:
+    "Twenty sealed problem briefs, one per team, opened for the first time at 9:20 AM on event day.",
 };
 
-export default async function ProblemsPage() {
-  const problems = await getProblems();
+export const dynamic = "force-static";
 
+/**
+ * The envelopes page.
+ *
+ * Only the twenty *domains* are published — never the brief titles or their
+ * contents. The whole format depends on no team seeing its problem before
+ * 9:20 AM on the day, so the titles stay in server-only content and are
+ * rendered nowhere outside the organiser console.
+ */
+export default function ProblemsPage() {
   return (
-    <Container className="flex flex-col gap-10 py-14">
-      <div className="flex flex-col gap-3 text-center">
-        <span className="eyebrow text-accent-400">Pick your challenge</span>
-        <h1 className="text-4xl font-semibold tracking-tighter text-white md:text-6xl">
-          Problem statements
-        </h1>
-        <p className="mx-auto max-w-xl text-sm text-zinc-400">
-          Five open tracks plus one surprise. Locked problems reveal automatically at their release
-          time.
-        </p>
-      </div>
+    <Container className="flex flex-col gap-12 py-14">
+      <SectionHead
+        section="Section 02 / Format"
+        eyebrow="Problem briefs"
+        icon="mail"
+        title="Twenty Envelopes."
+        accent="One Each."
+        lead="Every team gets its own sealed brief — a different real-world problem for each of the 20 teams, so no two teams build the same thing. Envelopes are handed out sealed and opened together at 9:20 AM. Nothing about your problem is published here, or anywhere else, before that moment."
+        align="center"
+      />
 
-      <div className="grid gap-5 md:grid-cols-2">
-        {problems.map((p: any) => (
-          <Card key={p.id} className="flex flex-col gap-4 p-6 md:p-7">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs text-accent-400">{p.code}</span>
-              <div className="flex items-center gap-2">
-                {p.difficulty && (
-                  <Badge variant={difficultyVariant[p.difficulty] ?? "small"}>{p.difficulty}</Badge>
-                )}
-                {p.released ? <Badge variant="success">Live</Badge> : <Badge variant="warning">Locked</Badge>}
-              </div>
-            </div>
+      {/* ── Sealed banner ──────────────────────────────────────── */}
+      <HackCard tone="brand" className="flex flex-col items-center gap-5 py-10 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-brand-400/30 bg-brand-500/12">
+          <Icon name="lock" className="h-6 w-6 text-brand-300" />
+        </span>
+        <div className="flex flex-col gap-2">
+          <Eyebrow>Sealed until the reveal</Eyebrow>
+          <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            Briefs open at 9:20 AM
+          </h2>
+          <p className="mx-auto max-w-lg text-[13.5px] leading-relaxed text-zinc-400">
+            {EVENT.dateLabel}. Your envelope is assigned in advance, but stays sealed until the
+            whole hall opens together.
+          </p>
+        </div>
+        <Countdown target={EVENT.revealAt} label="Reveal in" className="items-center" compact />
+      </HackCard>
 
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight text-white">{p.title}</h2>
-              {p.track && <span className="text-xs text-brand-300">{p.track}</span>}
-            </div>
+      {/* ── Domains ────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Eyebrow>The fields in play</Eyebrow>
+            <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+              {ENVELOPES.length} domains, {ENVELOPES.length} problems
+            </h2>
+          </div>
+          <p className="max-w-md text-[13px] leading-relaxed text-zinc-500">
+            These are the areas the briefs are drawn from. Which envelope your team receives, and
+            what it asks for, is revealed on the day.
+          </p>
+        </div>
 
-            {p.released ? (
-              <>
-                <p className="text-sm leading-relaxed text-zinc-300">{p.summary}</p>
-                {p.description && (
-                  <p className="text-sm leading-relaxed text-zinc-500">{p.description}</p>
-                )}
-                {p.pdf_url && (
-                  <ButtonLink
-                    href={p.pdf_url}
-                    variant="secondary"
-                    size="sm"
-                    className="mt-1 w-fit rounded-full"
-                  >
-                    <Download className="h-4 w-4" /> Full brief (PDF)
-                  </ButtonLink>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-white/10 bg-zinc-950/40 p-5">
-                <span className="flex items-center gap-2 text-sm text-zinc-400">
-                  <Lock className="h-4 w-4 text-amber-300" /> Unlocks soon
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {ENVELOPES.map((e) => (
+            <HackCard key={e.no} interactive className="flex flex-col gap-3 p-5">
+              <div className="flex items-start justify-between">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.05]">
+                  <Icon name="lock" className="h-4 w-4 text-zinc-500" />
                 </span>
-                {p.release_at && (
-                  <span className="flex items-center gap-2 text-xs text-zinc-500">
-                    <Clock className="h-3.5 w-3.5" />
-                    <Countdown target={p.release_at} compact />
-                  </span>
-                )}
+                <span className="font-mono text-[10px] text-zinc-600">
+                  {String(e.no).padStart(2, "0")}
+                </span>
               </div>
-            )}
-          </Card>
-        ))}
-        {problems.length === 0 && (
-          <Card className="col-span-full flex flex-col items-center gap-3 py-16 text-center">
-            <FileText className="h-6 w-6 text-zinc-700" />
-            <p className="text-sm text-zinc-500">Problem statements will appear here once released.</p>
-          </Card>
-        )}
+              <span className="text-[13.5px] font-medium leading-tight text-white">{e.domain}</span>
+              <span className="text-[10px] uppercase tracking-[0.14em] text-zinc-600">Sealed</span>
+            </HackCard>
+          ))}
+        </div>
       </div>
+
+      {/* ── What's inside / what you hand back ─────────────────── */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <HackCard tone="brand" className="flex flex-col gap-5">
+          <IconTile name="mail" tone="brand" className="h-11 w-11" />
+          <div className="flex flex-col gap-1.5">
+            <Eyebrow>Inside the envelope</Eyebrow>
+            <CardTitle as="h3" className="text-xl">
+              What your brief contains
+            </CardTitle>
+          </div>
+          <ol className="flex flex-col gap-2.5">
+            {ENVELOPE_CONTENTS.map((item, i) => (
+              <li key={item} className="flex items-start gap-3">
+                <span className="mt-0.5 font-mono text-[11px] text-brand-400">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="text-[13.5px] leading-relaxed text-zinc-300">{item}</span>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
+            {BRIEF_SECTIONS.map((s) => (
+              <span
+                key={s}
+                className="rounded-full border border-white/[0.08] px-2.5 py-1 text-[10.5px] text-zinc-500"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        </HackCard>
+
+        <HackCard tone="accent" className="flex flex-col gap-5">
+          <IconTile name="usb" tone="accent" className="h-11 w-11" />
+          <div className="flex flex-col gap-1.5">
+            <Eyebrow tone="accent">By code freeze</Eyebrow>
+            <CardTitle as="h3" className="text-xl">
+              What you hand back
+            </CardTitle>
+          </div>
+          <CardBody>
+            Everything is handed over in person at your desk — nothing is uploaded to this site.
+          </CardBody>
+          <ul className="mt-auto flex flex-col gap-2.5">
+            {DELIVERABLES.map((d) => (
+              <CheckRow key={d} tone="accent">
+                {d}
+              </CheckRow>
+            ))}
+          </ul>
+        </HackCard>
+      </div>
+
+      <p className="text-center text-[11px] uppercase tracking-[0.18em] text-zinc-600">
+        Infinium · Build · Adapt · Innovate · {ENVELOPES.length} sealed briefs
+      </p>
     </Container>
   );
 }

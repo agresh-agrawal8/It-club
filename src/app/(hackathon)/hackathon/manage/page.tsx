@@ -1,246 +1,141 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Check, X, KeyRound, RefreshCw, FileText, Users, Gavel } from "lucide-react";
-import { requireAdmin } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/server";
+import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/container";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
-import {
-  approveTeamAction,
-  rejectTeamAction,
-  resetTeamPasswordAction,
-  assignProblemAction,
-} from "@/lib/hackathon/team-actions";
-import { TeamEditor } from "@/components/hackathon/team-editor";
-import { SubmitButton } from "@/components/ui/submit-button";
-import { roleLabel } from "@/lib/utils";
+import { CardBody, Eyebrow, HackCard, IconTile, SectionHead } from "@/components/hackathon/card";
+import { requireAdmin } from "@/lib/auth";
+import { ENVELOPES, EVENT } from "@/lib/hackathon/content";
+import { getMembers, getResults, getTeams } from "@/lib/hackathon/data";
+import { publishAllResultsAction } from "@/lib/hackathon/actions";
+import { TeamAdminCard, type EnvelopeOption } from "./team-admin";
 
-export const metadata: Metadata = { title: "Manage Infinium" };
+export const metadata: Metadata = { title: "Manage teams" };
 
-const ROLE_LABEL: Record<string, string> = {
-  captain: "Captain",
-  frontend: "Frontend",
-  backend: "Backend",
-  uiux: "UI/UX",
-  docs: "Docs",
-};
-
-/**
- * Core Team control panel for Infinium — gated by the CLUB admin login
- * (requireAdmin), which is how the core team gets access to the hackathon.
- */
 export default async function ManagePage() {
-  const { profile } = await requireAdmin();
+  await requireAdmin();
 
-  const supabase = createAdminClient();
-  const [{ data: teams }, { data: members }, { data: problems }] = await Promise.all([
-    supabase.from("hack_teams").select("*").order("created_at"),
-    supabase.from("hack_participants").select("*").not("team_id", "is", null),
-    supabase.from("hack_problems").select("id,code,title,envelope_no").order("envelope_no"),
-  ]);
+  const [teams, members, results] = await Promise.all([getTeams(), getMembers(), getResults()]);
 
-  const byTeam = new Map<string, any[]>();
-  for (const m of members ?? []) {
-    const arr = byTeam.get(m.team_id) ?? [];
-    arr.push(m);
-    byTeam.set(m.team_id, arr);
+  const membersByTeam = new Map<string, typeof members>();
+  for (const m of members) {
+    const list = membersByTeam.get(m.team_id) ?? [];
+    list.push(m);
+    membersByTeam.set(m.team_id, list);
   }
-  const assigned = new Set((teams ?? []).map((t: any) => t.problem_id).filter(Boolean));
+  const resultByTeam = new Map(results.map((r) => [r.team_id, r]));
 
-  const pending = (teams ?? []).filter((t: any) => t.reg_status === "pending");
-  const approved = (teams ?? []).filter((t: any) => t.reg_status === "approved");
+  // Envelope labels include the brief title — organisers need it to assign a
+  // sensible problem — so they are built here, in a server component, and
+  // handed down as props rather than importing content into the client.
+  const takenBy = new Map(
+    teams.filter((t) => t.envelope_no != null).map((t) => [t.envelope_no!, t.name]),
+  );
+  const envelopeOptions: EnvelopeOption[] = ENVELOPES.map((e) => ({
+    no: e.no,
+    label: `${e.code} · ${e.domain} — ${e.title}`,
+    takenBy: takenBy.get(e.no) ?? null,
+  }));
+
+  const entered = results.filter((r) => r.final_score != null).length;
+  const published = results.filter((r) => r.published).length;
 
   return (
     <Container className="flex flex-col gap-8 py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow text-amber-300/90">Core team · {roleLabel(profile?.role)}</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tighter text-white md:text-4xl">
-            Manage Infinium
-          </h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Teams now receive their Team ID and password the moment they register. Use this panel to
-            assign problem envelopes, re-issue lost passwords and remove teams.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <ButtonLink href="/hackathon/admin" variant="ghost" size="sm" className="rounded-full">
-            ← Console
-          </ButtonLink>
-          <ButtonLink href="/hackathon/judge" variant="secondary" size="sm" className="rounded-full">
-            <Gavel className="h-4 w-4" /> Judging
-          </ButtonLink>
-          <ButtonLink href="/hackathon" variant="ghost" size="sm" className="rounded-full">
-            Public site
-          </ButtonLink>
-        </div>
+      <Link
+        href="/hackathon/admin"
+        className="flex w-fit items-center gap-1.5 text-[13px] text-zinc-500 transition-colors hover:text-white"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> Admin console
+      </Link>
+
+      <SectionHead
+        eyebrow="Core team"
+        icon="users"
+        title="Manage Teams"
+        lead="Edit rosters, assign sealed envelopes, and record each team's offline result — the final value from the paper sheet, the judges' remarks, and a scan of the sheet itself."
+      />
+
+      {/* ── Counters ───────────────────────────────────────────── */}
+      <div className="grid gap-3 sm:grid-cols-4">
+        {[
+          { label: "Teams", value: `${teams.length}/${EVENT.maxTeams}` },
+          { label: "Members", value: String(members.length) },
+          { label: "Scores entered", value: `${entered}/${teams.length}` },
+          { label: "Published", value: `${published}/${teams.length}` },
+        ].map((s) => (
+          <HackCard key={s.label} className="flex flex-col gap-1 p-5">
+            <Eyebrow tone="default">{s.label}</Eyebrow>
+            <span className="text-xl font-semibold tracking-tight text-white">{s.value}</span>
+          </HackCard>
+        ))}
       </div>
 
-      {/* Pending registrations */}
-      <section className="flex flex-col gap-4">
-        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
-          <Users className="h-4 w-4" /> Pending registrations ({pending.length})
-        </h2>
-        {pending.length === 0 && (
-          <p className="text-sm text-zinc-500">No registrations waiting for approval.</p>
-        )}
-        {pending.map((t: any) => (
-          <Card key={t.id} className="flex flex-col gap-4 p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-semibold text-white">{t.name}</h3>
-                <p className="text-xs text-zinc-500">
-                  {t.school ?? "—"}
-                  {t.tagline ? ` · ${t.tagline}` : ""}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <form action={approveTeamAction}>
-                  <input type="hidden" name="id" value={t.id} />
-                  <SubmitButton
-                    icon={<Check className="h-3.5 w-3.5" />}
-                    pendingText="Approving…"
-                    className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-accent-400/40 hover:text-accent-300"
-                  >
-                    Approve &amp; issue ID
-                  </SubmitButton>
-                </form>
-                <form action={rejectTeamAction}>
-                  <input type="hidden" name="id" value={t.id} />
-                  <SubmitButton
-                    icon={<X className="h-3.5 w-3.5" />}
-                    pendingText="Rejecting…"
-                    className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-red-400/40 hover:text-red-300"
-                  >
-                    Reject
-                  </SubmitButton>
-                </form>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(byTeam.get(t.id) ?? []).map((m: any) => (
-                <span
-                  key={m.id}
-                  className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-zinc-300"
-                >
-                  {m.name} · {m.class_section} · {ROLE_LABEL[m.member_role] ?? "—"}
-                  {m.is_quiz_rep && <span className="ml-1 text-accent-400">· quiz</span>}
-                </span>
-              ))}
-            </div>
-          </Card>
-        ))}
-      </section>
+      {/* ── Publish all ────────────────────────────────────────── */}
+      <HackCard tone="amber" className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <IconTile name="trophy" tone="amber" className="h-9 w-9" />
+          <div className="flex flex-col gap-1">
+            <span className="text-[15px] font-semibold tracking-tight text-white">
+              Release results
+            </span>
+            <CardBody className="text-[13px]">
+              Publishes every team that has a score entered. Teams see their Achievement Card and
+              the standings page fills in — do this at the closing ceremony.
+            </CardBody>
+          </div>
+        </div>
+        <form action={publishAllResultsAction}>
+          <button className="rounded-full bg-amber-500 px-5 py-2.5 text-[13px] font-medium text-black transition-opacity hover:opacity-90">
+            Publish all {entered} results
+          </button>
+        </form>
+      </HackCard>
 
-      {/* Approved teams */}
-      <section className="flex flex-col gap-4">
-        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
-          <KeyRound className="h-4 w-4" /> Approved teams ({approved.length}/10)
-        </h2>
-        {approved.length === 0 && <p className="text-sm text-zinc-500">No approved teams yet.</p>}
-        {approved.map((t: any) => (
-          <Card key={t.id} className="flex flex-col gap-4 p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm text-accent-400">{t.team_code}</span>
-                  <h3 className="text-lg font-semibold text-white">{t.name}</h3>
-                  <Badge variant={t.status === "submitted" ? "success" : "accent"}>{t.status}</Badge>
-                </div>
-                <p className="mt-1 text-xs text-zinc-500">
-                  {(byTeam.get(t.id) ?? []).length} members · progress {t.progress}%
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {t.join_code && (
-                  <span className="rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-1.5 font-mono text-xs text-amber-200">
-                    pw: {t.join_code}
-                  </span>
-                )}
-                <form action={resetTeamPasswordAction}>
-                  <input type="hidden" name="id" value={t.id} />
-                  <SubmitButton
-                    icon={<RefreshCw className="h-3.5 w-3.5" />}
-                    pendingText="Resetting…"
-                    className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] text-zinc-400 transition-colors hover:border-brand-400/40 hover:text-brand-300"
-                  >
-                    Reset
-                  </SubmitButton>
-                </form>
-              </div>
-            </div>
-
-            {/* Assign a unique problem envelope */}
-            <form action={assignProblemAction} className="flex flex-wrap items-center gap-2">
-              <input type="hidden" name="team_id" value={t.id} />
-              <FileText className="h-4 w-4 text-brand-300" />
-              <select
-                name="problem_id"
-                defaultValue={t.problem_id ?? ""}
-                className="rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-xs text-white focus:border-brand-400/60 focus:outline-none"
-              >
-                <option value="">— No envelope assigned —</option>
-                {(problems ?? []).map((p: any) => {
-                  const takenByOther = assigned.has(p.id) && t.problem_id !== p.id;
-                  return (
-                    <option key={p.id} value={p.id} disabled={takenByOther}>
-                      {p.code} · {p.title}
-                      {takenByOther ? " (assigned)" : ""}
-                    </option>
-                  );
-                })}
-              </select>
-              <SubmitButton
-                pendingText="Assigning…"
-                className="rounded-lg border border-white/10 px-3 py-2 text-[11px] text-zinc-300 transition-colors hover:border-brand-400/40 hover:text-brand-300"
-              >
-                Assign
-              </SubmitButton>
-            </form>
-
-            <div className="flex flex-wrap gap-2">
-              {(byTeam.get(t.id) ?? []).map((m: any) => (
-                <span
-                  key={m.id}
-                  className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-zinc-300"
-                >
-                  {m.name} · {m.class_section} · {ROLE_LABEL[m.member_role] ?? "—"}
-                  {m.is_quiz_rep && <span className="ml-1 text-accent-400">· quiz</span>}
-                </span>
-              ))}
-            </div>
-
-            {/* Full edit: team details, members, deletion */}
-            <TeamEditor
+      {/* ── Teams ──────────────────────────────────────────────── */}
+      {teams.length === 0 ? (
+        <HackCard className="flex flex-col items-center gap-3 py-14 text-center">
+          <IconTile name="users" className="h-12 w-12" />
+          <span className="text-[15px] font-medium text-white">No teams registered yet</span>
+          <CardBody className="max-w-sm">
+            Teams appear here as soon as they register at /hackathon/register.
+          </CardBody>
+        </HackCard>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {teams.map((t) => (
+            <TeamAdminCard
+              key={t.id}
               team={{
                 id: t.id,
                 name: t.name,
-                school: t.school ?? null,
-                tagline: t.tagline ?? null,
+                team_code: t.team_code,
+                tagline: t.tagline,
+                school: t.school,
                 status: t.status,
-                progress: t.progress ?? 0,
+                envelope_no: t.envelope_no,
               }}
-              members={(byTeam.get(t.id) ?? []).map((m: any) => ({
+              members={(membersByTeam.get(t.id) ?? []).map((m) => ({
                 id: m.id,
                 name: m.name,
                 class_section: m.class_section,
                 member_role: m.member_role,
-                is_quiz_rep: Boolean(m.is_quiz_rep),
+                is_quiz_rep: m.is_quiz_rep,
               }))}
+              result={
+                resultByTeam.has(t.id)
+                  ? {
+                      final_score: resultByTeam.get(t.id)!.final_score,
+                      remarks: resultByTeam.get(t.id)!.remarks,
+                      hasSheet: Boolean(resultByTeam.get(t.id)!.sheet_path),
+                      published: resultByTeam.get(t.id)!.published,
+                    }
+                  : null
+              }
+              envelopes={envelopeOptions}
             />
-          </Card>
-        ))}
-      </section>
-
-      <p className="text-center text-xs text-zinc-600">
-        Team passwords are shown once here so you can hand them to students. Use{" "}
-        <Link href="/hackathon/login" className="text-brand-300">
-          /hackathon/login
-        </Link>{" "}
-        to test a team sign-in.
-      </p>
+          ))}
+        </div>
+      )}
     </Container>
   );
 }

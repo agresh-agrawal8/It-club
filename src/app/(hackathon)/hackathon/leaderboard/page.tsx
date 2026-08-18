@@ -1,112 +1,174 @@
 import type { Metadata } from "next";
-import { Trophy, Crown, Minus } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { Container } from "@/components/ui/container";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { getLeaderboard } from "@/lib/hackathon/data";
+import { Icon } from "@/components/hackathon/icons";
+import { CardBody, Eyebrow, HackCard, IconTile, SectionHead } from "@/components/hackathon/card";
+import { EVENT } from "@/lib/hackathon/content";
+import { getStandings } from "@/lib/hackathon/data";
 
-export const metadata: Metadata = { title: "Leaderboard" };
-
-const statusVariant: Record<string, "success" | "accent" | "warning" | "danger" | "small"> = {
-  submitted: "success",
-  active: "accent",
-  forming: "warning",
-  disqualified: "danger",
+export const metadata: Metadata = {
+  title: "Final results",
+  description:
+    "Final Infinium standings, published after judging closes. Scores are marked in person on the official paper sheet.",
 };
 
-const podium = ["text-amber-300", "text-zinc-300", "text-orange-300"];
+const PODIUM = [
+  { ring: "border-amber-400/40 bg-amber-500/10", text: "text-amber-300", label: "1st" },
+  { ring: "border-zinc-300/30 bg-white/[0.06]", text: "text-zinc-200", label: "2nd" },
+  { ring: "border-orange-400/35 bg-orange-500/10", text: "text-orange-300", label: "3rd" },
+];
 
+/**
+ * Final standings.
+ *
+ * Every number here was written by a judge on paper and typed in by the core
+ * team — nothing on this page is computed from anything the website measured.
+ * Only published results appear, so drafts entered during the closing ceremony
+ * stay hidden until the organisers release them.
+ */
 export default async function LeaderboardPage() {
-  const rows = await getLeaderboard();
-  const scored = rows.filter((r) => r.judges > 0);
-  const top = scored.slice(0, 3);
+  const rows = await getStandings();
+  const top = rows.slice(0, 3);
+  const rest = rows.slice(3);
 
   return (
-    <Container className="flex flex-col gap-10 py-14">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <span className="eyebrow text-accent-400">Live standings</span>
-        <h1 className="text-4xl font-semibold tracking-tighter text-white md:text-6xl">Leaderboard</h1>
-        <p className="max-w-xl text-sm text-zinc-400">
-          Teams ranked by average judge score across innovation, execution, impact and presentation.
-        </p>
-      </div>
+    <Container className="flex flex-col gap-12 py-14">
+      <SectionHead
+        eyebrow="Final standings"
+        icon="trophy"
+        title="The Board."
+        lead="Judging happens in person on the official paper sheet — four judges, five teams each, six minutes per team. Final scores are published here after the closing ceremony."
+        align="center"
+        tone="amber"
+      />
 
-      {/* Podium */}
-      {top.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {top.map((r, i) => (
-            <Card
-              key={r.team_id}
-              deep={i === 0}
-              className={`relative flex flex-col items-center gap-2 p-6 text-center ${
-                i === 0 ? "sm:-translate-y-3" : ""
-              }`}
-            >
-              <Crown className={`h-6 w-6 ${podium[i]}`} />
-              <span className="text-4xl font-semibold tracking-tighter text-white">{r.avg}</span>
-              <span className="text-[11px] uppercase tracking-wide text-zinc-500">avg / 40</span>
-              <h3 className="mt-1 text-sm font-semibold text-white">{r.name}</h3>
-              {r.tagline && <p className="text-xs text-zinc-500">{r.tagline}</p>}
-              <span className="mt-1 font-mono text-[11px] text-accent-400">#{i + 1}</span>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Full table */}
-      <Card className="overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-left text-sm">
-            <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-zinc-500">
-              <tr>
-                <th className="px-5 py-3.5 font-medium">#</th>
-                <th className="px-5 py-3.5 font-medium">Team</th>
-                <th className="px-5 py-3.5 font-medium">Track</th>
-                <th className="px-5 py-3.5 font-medium">Status</th>
-                <th className="px-5 py-3.5 text-right font-medium">Judges</th>
-                <th className="px-5 py-3.5 text-right font-medium">Avg</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {rows.map((r, i) => (
-                <tr key={r.team_id} className="transition-colors hover:bg-white/[0.03]">
-                  <td className="px-5 py-3.5">
-                    <span
-                      className={`font-mono text-sm ${i < 3 && r.judges > 0 ? podium[i] : "text-zinc-500"}`}
-                    >
-                      {r.judges > 0 ? i + 1 : <Minus className="h-3.5 w-3.5 text-zinc-700" />}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="font-medium text-white">{r.name}</div>
-                    {r.tagline && <div className="text-[11px] text-zinc-500">{r.tagline}</div>}
-                  </td>
-                  <td className="px-5 py-3.5 font-mono text-xs text-accent-400">
-                    {r.problem_code ?? "—"}
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <Badge variant={statusVariant[r.status] ?? "small"}>{r.status}</Badge>
-                  </td>
-                  <td className="px-5 py-3.5 text-right tabular-nums text-zinc-400">{r.judges}</td>
-                  <td className="px-5 py-3.5 text-right">
-                    <span className="font-semibold tabular-nums text-white">
-                      {r.judges > 0 ? r.avg : "—"}
-                    </span>
-                  </td>
-                </tr>
+      {rows.length === 0 ? (
+        <HackCard tone="brand" className="flex flex-col items-center gap-4 py-16 text-center">
+          <IconTile name="lock" tone="brand" className="h-12 w-12" />
+          <h2 className="text-xl font-semibold tracking-tight text-white">
+            Results are not published yet
+          </h2>
+          <p className="max-w-md text-[13.5px] leading-relaxed text-zinc-400">
+            Standings appear here once judging closes and the Organizing Committee publishes the
+            scores. Until then, nothing is ranked — there is no live scoring at Infinium.
+          </p>
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-2 text-[12px] text-zinc-500">
+            <Icon name="calendar" className="h-4 w-4" />
+            {EVENT.dateLabel} · results at the closing ceremony
+          </div>
+          <Link
+            href="/hackathon/team"
+            className="mt-3 rounded-full border border-white/12 px-5 py-2.5 text-sm text-white transition-colors hover:border-white/25"
+          >
+            Open your team portal
+          </Link>
+        </HackCard>
+      ) : (
+        <>
+          {/* ── Podium ─────────────────────────────────────────── */}
+          {top.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              {top.map((r, i) => (
+                <HackCard
+                  key={r.team_id}
+                  tone={i === 0 ? "amber" : "default"}
+                  className={`flex flex-col items-center gap-3 py-8 text-center ${
+                    i === 0 ? "sm:order-2" : i === 1 ? "sm:order-1" : "sm:order-3"
+                  }`}
+                >
+                  <span
+                    className={`flex h-12 w-12 items-center justify-center rounded-2xl border text-[13px] font-semibold ${
+                      PODIUM[i].ring
+                    } ${PODIUM[i].text}`}
+                  >
+                    {PODIUM[i].label}
+                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-lg font-semibold tracking-tight text-white">{r.name}</span>
+                    {r.team_code && (
+                      <span className="font-mono text-[11px] text-zinc-600">{r.team_code}</span>
+                    )}
+                  </div>
+                  <span className="text-3xl font-semibold tracking-tighter text-white">
+                    {r.score}
+                  </span>
+                  <Eyebrow tone={i === 0 ? "amber" : "default"}>Points</Eyebrow>
+                </HackCard>
               ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-zinc-500">
-                    <Trophy className="mx-auto mb-3 h-6 w-6 text-zinc-700" />
-                    Scores appear here as judges submit them.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+            </div>
+          )}
+
+          {/* ── Table ──────────────────────────────────────────── */}
+          {rest.length > 0 && (
+            <HackCard bare className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[420px] text-left">
+                  <thead>
+                    <tr className="border-b border-white/[0.07]">
+                      {["Rank", "Team", "School", "Score"].map((h, i) => (
+                        <th
+                          key={h}
+                          className={`px-5 py-3.5 text-[10px] uppercase tracking-[0.14em] text-zinc-500 ${
+                            i === 3 ? "text-right" : ""
+                          } ${i === 2 ? "hidden sm:table-cell" : ""}`}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rest.map((r) => (
+                      <tr
+                        key={r.team_id}
+                        className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02]"
+                      >
+                        <td className="px-5 py-3.5 font-mono text-[12px] text-zinc-500">
+                          {r.rank}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className="text-[14px] font-medium text-white">{r.name}</span>
+                          {r.team_code && (
+                            <span className="ml-2 font-mono text-[10.5px] text-zinc-600">
+                              {r.team_code}
+                            </span>
+                          )}
+                        </td>
+                        <td className="hidden px-5 py-3.5 text-[12.5px] text-zinc-500 sm:table-cell">
+                          {r.school ?? "—"}
+                        </td>
+                        <td className="px-5 py-3.5 text-right text-[14px] font-semibold tabular-nums text-white">
+                          {r.score}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </HackCard>
+          )}
+
+          <HackCard className="flex items-start gap-4">
+            <IconTile name="file" className="h-9 w-9" />
+            <div className="flex flex-col gap-1">
+              <span className="text-[15px] font-semibold tracking-tight text-white">
+                Want your own sheet?
+              </span>
+              <CardBody>
+                Every team can open its Achievement Card in the team portal to see its final score,
+                the judges&apos; remarks and a scan of its physical evaluation sheet.
+              </CardBody>
+              <Link
+                href="/hackathon/team"
+                className="mt-1 inline-flex w-fit items-center gap-1.5 text-[13px] text-brand-300 transition-colors hover:text-brand-200"
+              >
+                Open team portal <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </HackCard>
+        </>
+      )}
     </Container>
   );
 }
