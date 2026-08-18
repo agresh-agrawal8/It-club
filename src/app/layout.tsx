@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -71,6 +72,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-surface-0 text-zinc-100 antialiased">
         {children}
         <InstallPrompt />
+        {/* Vercel Web Analytics — page views only, no cookies. Injects a small
+            script on the deployment; a no-op in local development. */}
+        <Analytics />
       </body>
     </html>
   );
