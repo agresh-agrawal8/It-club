@@ -25,6 +25,7 @@ import { getAnnouncements, getTeamPortal } from "@/lib/hackathon/data";
 import { getTeamSessionId } from "@/lib/hackathon/session";
 import { closePortalAction } from "@/lib/hackathon/portal-actions";
 import { BriefView } from "@/components/hackathon/brief-view";
+import { PortalCacheGuard, SaveOffline } from "@/components/hackathon/offline-kit";
 import { SealedEnvelope } from "@/components/hackathon/visuals";
 import { PortalForm } from "./portal-form";
 import { SubmissionForm } from "./submission-form";
@@ -89,6 +90,8 @@ export default async function TeamPortalPage() {
 
   return (
     <Container className="flex flex-col gap-6 py-10 md:gap-8">
+      <PortalCacheGuard teamId={team.id} />
+
       {/* ── Header ──────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
@@ -371,6 +374,10 @@ export default async function TeamPortalPage() {
 
         {/* ── Sidebar ──────────────────────────────────────────── */}
         <div className="flex flex-col gap-5">
+          {/* Deliberately the first thing in the sidebar: this is the one
+              action a team must take before the internet is cut. */}
+          <SaveOffline />
+
           <HackCard tone="brand" className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <IconTile name="calendar" tone="brand" className="h-9 w-9" />

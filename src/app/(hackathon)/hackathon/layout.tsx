@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { HackNav } from "@/components/hackathon/hack-nav";
+import { OfflineBadge, OfflineRegistrar } from "@/components/hackathon/offline-kit";
 import { Container } from "@/components/ui/container";
 import { EVENT } from "@/lib/hackathon/content";
 
@@ -11,6 +12,10 @@ export const metadata: Metadata = {
   },
   description:
     "Infinium — a one-day, fully offline software hackathon at Emerald Heights International School. 20 teams, one sealed problem each, no internet.",
+  // Infinium installs as its own app, separate from the club PWA: its own
+  // icon, and it opens straight into the team portal.
+  manifest: "/hackathon/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Infinium", statusBarStyle: "black-translucent" },
 };
 
 /**
@@ -25,6 +30,9 @@ export const metadata: Metadata = {
 export default function HackathonLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-[#08080b]">
+      {/* Offline support for the build day — see components/hackathon/offline-kit. */}
+      <OfflineRegistrar />
+      <OfflineBadge />
       <HackNav />
       <main className="flex-1">{children}</main>
 
