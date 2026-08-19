@@ -80,7 +80,11 @@ export default async function TeamPortalPage() {
   const { team, members, result, submission, config, sheetUrl, codeUrl, deckUrl } = portal;
   const envelope = envelopeByNo(team.envelope_no);
   const announcements = await getAnnouncements();
-  const published = Boolean(result?.published);
+  // A row can be flagged published while its score is still empty (direct SQL,
+  // or a half-finished entry). Showing that team a giant "—" as its official
+  // result would be worse than showing nothing, so treat it as not yet out —
+  // the same rule the leaderboard applies.
+  const published = Boolean(result?.published && result.final_score != null);
   const quizReps = members.filter((m) => m.is_quiz_rep);
 
   // The brief is only assembled once the core team has released it. Before

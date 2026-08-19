@@ -56,14 +56,6 @@ export async function postAnnouncementAction(_prev: unknown, formData: FormData)
   return { success: "Announcement posted." };
 }
 
-export async function deleteAnnouncementAction(formData: FormData) {
-  await requireAdmin();
-  const id = String(formData.get("id") ?? "");
-  if (!id) return;
-  await createAdminClient().from("hack_announcements").delete().eq("id", id);
-  revalidateHack();
-}
-
 /* ─────────────────────────── Teams ─────────────────────────── */
 
 export async function updateTeamDetailsAction(_prev: unknown, formData: FormData) {
@@ -415,6 +407,7 @@ export async function saveResultAction(_prev: unknown, formData: FormData) {
 
   // Optional new scan of the paper sheet.
   let sheetPath: string | undefined;
+  let stalePath: string | null = null;
   const file = formData.get("sheet");
   if (file instanceof File && file.size > 0) {
     const ext = SHEET_TYPES[file.type];
@@ -427,15 +420,12 @@ export async function saveResultAction(_prev: unknown, formData: FormData) {
       .upload(path, file, { contentType: file.type, upsert: false });
     if (uploadError) return { error: `Could not upload the sheet: ${uploadError.message}` };
 
-    // Drop the previous scan so the bucket does not accumulate dead objects.
     const { data: prev } = await supabase
       .from("hack_results")
       .select("sheet_path")
       .eq("team_id", teamId)
       .maybeSingle();
-    if (prev?.sheet_path) {
-      await supabase.storage.from("hack-sheets").remove([prev.sheet_path]);
-    }
+    stalePath = prev?.sheet_path ?? null;
     sheetPath = path;
   }
 
@@ -451,36 +441,72 @@ export async function saveResultAction(_prev: unknown, formData: FormData) {
   );
   if (error) return { error: error.message };
 
+  // Only now is the old scan safe to drop. Deleting it before the row was
+  // written would destroy the previous sheet while the database still pointed
+  // at it — leaving the team's Achievement Card showing a broken image with
+  // nothing to fall back to.
+  if (stalePath && stalePath !== sheetPath) {
+    await supabase.storage.from("hack-sheets").remove([stalePath]);
+  }
+
   revalidateHack();
   return { success: "Result saved." };
 }
 
 /** Publish or unpublish one team's result. */
-export async function toggleResultPublishedAction(formData: FormData) {
+export async function toggleResultPublishedAction(_prev: unknown, formData: FormData) {
   await requireAdmin();
   const teamId = String(formData.get("team_id") ?? "");
   const published = formData.get("published") === "true";
-  if (!teamId) return;
+  if (!teamId) return { error: "Missing team." };
 
-  await createAdminClient()
+  const supabase = createAdminClient();
+
+  // Publishing a team that has no score would upsert a row with a null score,
+  // and the portal would show that team a big "—" as its official result.
+  // Refuse instead: there is nothing meaningful to publish yet.
+  if (!published) {
+    const { data: existing } = await supabase
+      .from("hack_results")
+      .select("final_score")
+      .eq("team_id", teamId)
+      .maybeSingle();
+    if (existing?.final_score == null) {
+      return { error: "Enter and save a final score before publishing this team." };
+    }
+  }
+
+  const { error } = await supabase
     .from("hack_results")
     .upsert(
       { team_id: teamId, published: !published, updated_at: new Date().toISOString() },
       { onConflict: "team_id" },
     );
+  if (error) return { error: error.message };
 
   revalidateHack();
+  return { success: published ? "Hidden from the team." : "Published to the team." };
 }
 
 /** Publish every entered result at once — for the closing ceremony. */
-export async function publishAllResultsAction() {
+export async function publishAllResultsAction(_prev?: unknown, _formData?: FormData) {
   await requireAdmin();
-  const supabase = createAdminClient();
-  await supabase
+
+  const { data, error } = await createAdminClient()
     .from("hack_results")
     .update({ published: true, updated_at: new Date().toISOString() })
-    .not("final_score", "is", null);
+    .not("final_score", "is", null)
+    .select("team_id");
+  if (error) return { error: error.message };
+
   revalidateHack();
+  const n = data?.length ?? 0;
+  return {
+    success:
+      n === 0
+        ? "No results to publish yet — enter the scores first."
+        : `Published ${n} result${n === 1 ? "" : "s"}.`,
+  };
 }
 
 /* ─────────────────────────── Day switches ─────────────────────────── */
@@ -495,18 +521,51 @@ export async function publishAllResultsAction() {
  */
 async function setConfig(patch: Record<string, unknown>) {
   await requireAdmin();
-  await createAdminClient()
+  const { error } = await createAdminClient()
     .from("hack_config")
     .upsert({ id: true, ...patch, updated_at: new Date().toISOString() }, { onConflict: "id" });
+  if (error) return { error: humanise(error.message) };
   revalidateHack();
+  return null;
 }
 
-export async function toggleBriefsReleasedAction(formData: FormData) {
+/**
+ * These two are the most consequential buttons of the day — releasing the
+ * sealed briefs at 9:20 and closing submissions at code freeze — so a failure
+ * must never look like a success. They previously discarded the write error,
+ * which would have left an organiser staring at an unchanged page with no
+ * idea the flip had not happened.
+ */
+export async function toggleBriefsReleasedAction(_prev: unknown, formData: FormData) {
   const released = formData.get("released") === "true";
-  await setConfig({ briefs_released: !released });
+  const failed = await setConfig({ briefs_released: !released });
+  if (failed) return failed;
+  return {
+    success: released
+      ? "Briefs re-sealed. Teams can no longer read them."
+      : "Briefs released. Every team can now read its problem.",
+  };
 }
 
-export async function toggleSubmissionsOpenAction(formData: FormData) {
+export async function toggleSubmissionsOpenAction(_prev: unknown, formData: FormData) {
   const open = formData.get("open") === "true";
-  await setConfig({ submissions_open: !open });
+  const failed = await setConfig({ submissions_open: !open });
+  if (failed) return failed;
+  return {
+    success: open
+      ? "Submissions closed. Further uploads are rejected."
+      : "Submissions open. Teams can hand in their work.",
+  };
+}
+
+export async function deleteAnnouncementAction(_prev: unknown, formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { error: "Missing announcement." };
+
+  const { error } = await createAdminClient().from("hack_announcements").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidateHack();
+  return { success: "Announcement deleted." };
 }

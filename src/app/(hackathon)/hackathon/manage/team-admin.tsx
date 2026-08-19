@@ -109,6 +109,10 @@ export function TeamAdminCard({
   const [resultState, resultAction, resultPending] = useActionState(saveResultAction, undefined);
   const [addState, addAction, addPending] = useActionState(addMemberAction, undefined);
   const [deleteState, deleteAction, deletePending] = useActionState(deleteTeamAction, undefined);
+  const [publishState, publishAction, publishPending] = useActionState(
+    toggleResultPublishedAction,
+    undefined,
+  );
   const [showDelete, setShowDelete] = useState(false);
 
   const published = result?.published ?? false;
@@ -267,19 +271,21 @@ export function TeamAdminCard({
             </div>
           </form>
 
-          <form action={toggleResultPublishedAction}>
+          <form action={publishAction} className="flex flex-col gap-2">
             <input type="hidden" name="team_id" value={team.id} />
             <input type="hidden" name="published" value={String(published)} />
             <button
-              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[13px] transition-colors ${
+              disabled={publishPending}
+              className={`inline-flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-[13px] transition-colors disabled:opacity-60 ${
                 published
                   ? "border-accent-400/40 bg-accent-500/10 text-accent-300 hover:border-red-400/40 hover:text-red-300"
                   : "border-white/12 text-zinc-300 hover:border-accent-400/40 hover:text-accent-300"
               }`}
             >
-              <Check className="h-3.5 w-3.5" />
+              {publishPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
               {published ? "Published — click to hide" : "Publish to this team"}
             </button>
+            <Feedback state={publishState} />
           </form>
         </Section>
 

@@ -13,7 +13,7 @@ import {
   getTeams,
   signSubmissionLinks,
 } from "@/lib/hackathon/data";
-import { publishAllResultsAction } from "@/lib/hackathon/actions";
+import { PublishAllButton } from "@/components/hackathon/admin-controls";
 import { TeamAdminCard } from "./team-admin";
 
 export const metadata: Metadata = { title: "Manage teams" };
@@ -93,11 +93,7 @@ export default async function ManagePage() {
             </CardBody>
           </div>
         </div>
-        <form action={publishAllResultsAction}>
-          <button className="rounded-full bg-amber-500 px-5 py-2.5 text-[13px] font-medium text-black transition-opacity hover:opacity-90">
-            Publish all {entered} results
-          </button>
-        </form>
+        <PublishAllButton entered={entered} />
       </HackCard>
 
       {/* ── Teams ──────────────────────────────────────────────── */}

@@ -15,10 +15,10 @@ import { requireAdmin } from "@/lib/auth";
 import { EVENT } from "@/lib/hackathon/content";
 import { getAdminStats, getAnnouncements, getConfig } from "@/lib/hackathon/data";
 import {
-  deleteAnnouncementAction,
-  toggleBriefsReleasedAction,
-  toggleSubmissionsOpenAction,
-} from "@/lib/hackathon/actions";
+  BriefsSwitch,
+  DeleteAnnouncementButton,
+  SubmissionsSwitch,
+} from "@/components/hackathon/admin-controls";
 
 export const metadata: Metadata = { title: "Admin console" };
 
@@ -86,18 +86,7 @@ export default async function AdminPage() {
               </div>
             </div>
           </div>
-          <form action={toggleBriefsReleasedAction} className="mt-auto">
-            <input type="hidden" name="released" value={String(config.briefs_released)} />
-            <button
-              className={`w-full rounded-full px-5 py-2.5 text-[13px] font-medium transition-opacity hover:opacity-90 ${
-                config.briefs_released
-                  ? "border border-white/12 text-white"
-                  : "bg-brand-600 text-white"
-              }`}
-            >
-              {config.briefs_released ? "Re-seal briefs" : "Release briefs (9:20 AM)"}
-            </button>
-          </form>
+          <BriefsSwitch released={config.briefs_released} />
         </HackCard>
 
         <HackCard tone={config.submissions_open ? "amber" : "default"} className="flex flex-col gap-4">
@@ -116,18 +105,7 @@ export default async function AdminPage() {
               </CardBody>
             </div>
           </div>
-          <form action={toggleSubmissionsOpenAction} className="mt-auto">
-            <input type="hidden" name="open" value={String(config.submissions_open)} />
-            <button
-              className={`w-full rounded-full px-5 py-2.5 text-[13px] font-medium transition-opacity hover:opacity-90 ${
-                config.submissions_open
-                  ? "border border-white/12 text-white"
-                  : "bg-amber-500 text-black"
-              }`}
-            >
-              {config.submissions_open ? "Close at code freeze" : "Open submissions"}
-            </button>
-          </form>
+          <SubmissionsSwitch open={config.submissions_open} />
         </HackCard>
       </div>
 
@@ -221,12 +199,7 @@ export default async function AdminPage() {
                     </div>
                     {a.body && <p className="mt-0.5 text-[12px] text-zinc-500">{a.body}</p>}
                   </div>
-                  <form action={deleteAnnouncementAction}>
-                    <input type="hidden" name="id" value={a.id} />
-                    <button className="shrink-0 text-[11.5px] text-zinc-600 transition-colors hover:text-red-300">
-                      Delete
-                    </button>
-                  </form>
+                  <DeleteAnnouncementButton id={a.id} />
                 </li>
               ))}
             </ul>
