@@ -12,6 +12,7 @@ import {
   sessionCookieOptions,
 } from "@/lib/events/session";
 import { generateLoginCode, generatePassword, hashPassword } from "@/lib/events/credentials";
+import { eventBasePath, eventRoutePath } from "@/lib/events/paths";
 
 /**
  * Public registration + login for any event.
@@ -108,9 +109,9 @@ export async function registerEventTeamAction(
   // Drops the cached registration count and team lists so the new team and the
   // updated "places claimed" figure are visible on the next request.
   revalidateTag(EVENT_TAG);
-  revalidatePath(`/events/hub/${slug}`);
-  revalidatePath(`/events/hub/${slug}/register`);
-  revalidatePath(`/events/hub/${slug}/admin`);
+  revalidatePath(eventRoutePath(slug));
+  revalidatePath(`${eventRoutePath(slug)}/register`);
+  revalidatePath(`${eventRoutePath(slug)}/admin`);
   return {
     success: "Your team is registered. Save these credentials — you need them to sign in.",
     loginCode: result.login_code,
@@ -155,7 +156,7 @@ export async function eventTeamLoginAction(_prev: unknown, formData: FormData) {
     mintSessionToken(res.participant_id!),
     sessionCookieOptions(slug),
   );
-  redirect(`/events/hub/${slug}/dashboard`);
+  redirect(`${eventBasePath(slug)}/dashboard`);
 }
 
 export async function eventLogoutAction(formData: FormData) {
@@ -164,5 +165,5 @@ export async function eventLogoutAction(formData: FormData) {
   // Delete with the same options the cookie was written with, or the browser
   // keeps it (a mismatched path/name pair is a no-op).
   store.set(eventCookieName(slug), "", { ...sessionCookieOptions(slug), maxAge: 0 });
-  redirect(`/events/hub/${slug}`);
+  redirect(eventBasePath(slug));
 }

@@ -16,6 +16,7 @@ import {
 import { getMissionCategories, getSchedule, getBadges } from "@/lib/events/queries";
 import { eventPhase, registrationOpen } from "@/lib/events/rules";
 import { formatDate, formatTime } from "@/lib/utils";
+import { eventBasePath } from "@/lib/events/paths";
 
 /**
  * Event landing page.
@@ -45,7 +46,7 @@ export default async function EventLandingPage({
   const theme = resolveTheme(event);
   const phase = eventPhase(event);
   const regStatus = registrationOpen(event, settings, registered);
-  const base = `/events/hub/${event.slug}`;
+  const base = eventBasePath(event.slug);
 
   // Count down to whichever deadline actually matters right now.
   const countdownTarget =

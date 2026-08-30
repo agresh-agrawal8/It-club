@@ -43,12 +43,56 @@ const nextConfig: NextConfig = {
       "it-club-rho.vercel.app",
       "it-club-git-main-agresh.vercel.app",
     ];
-    return stale.map((host) => ({
-      source: "/:path*",
-      has: [{ type: "host" as const, value: host }],
-      destination: `${canonical}/:path*`,
-      permanent: true,
-    }));
+
+    return [
+      ...stale.map((host) => ({
+        source: "/:path*",
+        has: [{ type: "host" as const, value: host }],
+        destination: `${canonical}/:path*`,
+        permanent: true,
+      })),
+
+      /**
+       * Code Red lives at /codered.
+       *
+       * The pages themselves stay where they are, under the event hub's
+       * `[event]` route — this only changes the address. Anything already
+       * linked or indexed at the old path is folded into the new one with a
+       * 308 so no inbound link breaks.
+       */
+      {
+        source: "/events/hub/code-red",
+        destination: "/codered",
+        permanent: true,
+      },
+
+      /**
+       * Competitions merged into events. A competition is now an event with
+       * `kind = "competition"`, so the old route folds into the new one
+       * rather than 404-ing anything already linked or indexed.
+       */
+      { source: "/competitions", destination: "/events", permanent: true },
+      { source: "/competitions/:path*", destination: "/events", permanent: true },
+      {
+        source: "/events/hub/code-red/:path*",
+        destination: "/codered/:path*",
+        permanent: true,
+      },
+    ];
+  },
+
+  /**
+   * Serve /codered from the event-hub route that renders Code Red.
+   *
+   * These run after redirects and after the filesystem, so they only catch
+   * paths that have no file of their own — and the rewritten destination is
+   * not re-checked against the redirects above, so this does not loop.
+   */
+  async rewrites() {
+    return [
+      { source: "/codered", destination: "/events/hub/code-red" },
+      { source: "/codered/:path*", destination: "/events/hub/code-red/:path*" },
+    ];
   },
 };
 

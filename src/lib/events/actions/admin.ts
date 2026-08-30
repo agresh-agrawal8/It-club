@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getEvent, EVENT_TAG } from "@/lib/events/engine";
 import { requireEventAdmin } from "@/lib/events/auth";
+import { eventBasePath } from "@/lib/events/paths";
 
 /**
  * CODE RED / event organiser actions.
@@ -23,7 +24,7 @@ async function authorise(slug: string) {
 }
 
 function base(slug: string) {
-  return `/events/hub/${slug}`;
+  return eventBasePath(slug);
 }
 
 /**

@@ -1,22 +1,31 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPublicClient } from "@/lib/supabase/server";
 import type {
   Achievement,
-  Competition,
   EventRow,
   GalleryItem,
   Notification,
   Profile,
-  Project,
-  ProjectMedia,
   TaskRow,
 } from "@/types/database";
 
 /**
- * Server-side data access. Every function is defensive: if Supabase is not yet
- * configured (or a query errors), it returns a safe empty value so pages render
- * their empty states instead of crashing. This lets the UI ship before the DB
- * is connected and keeps the app resilient.
+ * Server-side data access. Every function is defensive: if Supabase is not
+ * configured (or a query errors) it returns a safe empty value, so pages render
+ * their empty states instead of crashing.
+ *
+ * Two clients, deliberately:
+ *
+ *   createPublicClient()  cookie-free, anon key. Used for everything a logged
+ *                         -out visitor can see. Because it never reads cookies,
+ *                         the pages calling it stay statically renderable and
+ *                         are served from the ISR cache instead of hitting
+ *                         Postgres on every request. RLS still applies — anon
+ *                         only ever sees what its policies and column grants
+ *                         allow.
+ *
+ *   createClient()        cookie-bound. Only for per-user data, where the
+ *                         answer depends on who is asking.
  */
 
 async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
@@ -27,66 +36,9 @@ async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   }
 }
 
-export async function getFeaturedProjects(limit = 6): Promise<Project[]> {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("projects")
-      .select("*")
-      .neq("status", "draft")
-      .order("featured", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(limit);
-    return (data as Project[]) ?? [];
-  }, []);
-}
-
-export async function getProjects(): Promise<Project[]> {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("projects")
-      .select("*")
-      .neq("status", "draft")
-      .order("created_at", { ascending: false });
-    return (data as Project[]) ?? [];
-  }, []);
-}
-
-export async function getProjectBySlug(slug: string) {
-  return safe<{ project: Project; media: ProjectMedia[]; authors: Profile[] } | null>(
-    async () => {
-      const supabase = await createClient();
-      const { data: project } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("slug", slug)
-        .single();
-      if (!project) return null;
-
-      const [{ data: media }, { data: authorLinks }] = await Promise.all([
-        supabase.from("project_media").select("*").eq("project_id", project.id).order("position"),
-        supabase.from("project_authors").select("profile_id").eq("project_id", project.id),
-      ]);
-
-      const authorIds = (authorLinks ?? []).map((a: { profile_id: string }) => a.profile_id);
-      const { data: authors } = authorIds.length
-        ? await supabase.from("profiles").select("*").in("id", authorIds)
-        : { data: [] };
-
-      return {
-        project: project as Project,
-        media: (media as ProjectMedia[]) ?? [],
-        authors: (authors as Profile[]) ?? [],
-      };
-    },
-    null,
-  );
-}
-
 export async function getEvents(): Promise<EventRow[]> {
   return safe(async () => {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("events")
       .select("*")
@@ -97,7 +49,7 @@ export async function getEvents(): Promise<EventRow[]> {
 
 export async function getUpcomingEvents(limit = 3): Promise<EventRow[]> {
   return safe(async () => {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("events")
       .select("*")
@@ -108,33 +60,48 @@ export async function getUpcomingEvents(limit = 3): Promise<EventRow[]> {
   }, []);
 }
 
-export async function getCompetitions(): Promise<Competition[]> {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("competitions")
-      .select("*")
-      .order("starts_at", { ascending: false });
-    return (data as Competition[]) ?? [];
-  }, []);
-}
+/**
+ * The public team list.
+ *
+ * Columns are named explicitly rather than `select("*")`: a bare star on
+ * `profiles` would ship `must_change_password` and `phone` to an anonymous
+ * visitor the moment either column is added to the table.
+ */
+export type PublicProfile = Pick<
+  Profile,
+  | "id"
+  | "full_name"
+  | "role"
+  | "avatar_url"
+  | "headline"
+  | "bio"
+  | "grade"
+  | "skills"
+  | "github_url"
+  | "linkedin_url"
+  | "website_url"
+>;
 
-export async function getTeam(): Promise<Profile[]> {
+export async function getTeam(): Promise<PublicProfile[]> {
   return safe(async () => {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("profiles")
-      .select("*")
+      .select(
+        "id, full_name, role, avatar_url, headline, bio, grade, skills, github_url, linkedin_url, website_url",
+      )
       .eq("is_active", true)
+      // core_team sorts before member alphabetically, which is also the order
+      // we want them displayed in.
       .order("role", { ascending: true })
       .order("full_name", { ascending: true });
-    return (data as Profile[]) ?? [];
+    return (data as PublicProfile[]) ?? [];
   }, []);
 }
 
 export async function getGallery(): Promise<GalleryItem[]> {
   return safe(async () => {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("gallery_items")
       .select("*")
@@ -146,7 +113,7 @@ export async function getGallery(): Promise<GalleryItem[]> {
 
 export async function getAchievements(): Promise<Achievement[]> {
   return safe(async () => {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("achievements")
       .select("*")
@@ -167,18 +134,6 @@ export async function getMyTasks(userId: string): Promise<TaskRow[]> {
   }, []);
 }
 
-export async function getMyProjects(userId: string): Promise<Project[]> {
-  return safe(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("owner_id", userId)
-      .order("updated_at", { ascending: false });
-    return (data as Project[]) ?? [];
-  }, []);
-}
-
 export async function getMyNotifications(userId: string): Promise<Notification[]> {
   return safe(async () => {
     const supabase = await createClient();
@@ -195,45 +150,43 @@ export async function getMyNotifications(userId: string): Promise<Notification[]
 export interface PlatformStats {
   members: number;
   activeMembers: number;
-  projects: number;
   events: number;
-  competitions: number;
   achievements: number;
-  visitors: number;
+  gallery: number;
 }
 
+const EMPTY_STATS: PlatformStats = {
+  members: 0,
+  activeMembers: 0,
+  events: 0,
+  achievements: 0,
+  gallery: 0,
+};
+
+/**
+ * Counts for the Core Team overview. These are real counts of real rows —
+ * nothing here is padded, and the dashboard shows a zero as a zero.
+ */
 export async function getPlatformStats(): Promise<PlatformStats> {
   return safe(async () => {
     const supabase = await createClient();
-    const count = (q: any) => q.then((r: { count: number | null }) => r.count ?? 0);
-    const [members, activeMembers, projects, events, competitions, achievements, visitors] =
+    const countOf = (table: string, activeOnly = false) => {
+      const q = supabase.from(table).select("id", { count: "exact", head: true });
+      return (activeOnly ? q.eq("is_active", true) : q).then(
+        (r: { count: number | null }) => r.count ?? 0,
+      );
+    };
+
+    const [members, activeMembers, events, achievements, gallery] =
       await Promise.all([
-        count(supabase.from("profiles").select("*", { count: "exact", head: true })),
-        count(
-          supabase
-            .from("profiles")
-            .select("*", { count: "exact", head: true })
-            .eq("is_active", true),
-        ),
-        count(
-          supabase
-            .from("projects")
-            .select("*", { count: "exact", head: true })
-            .neq("status", "draft"),
-        ),
-        count(supabase.from("events").select("*", { count: "exact", head: true })),
-        count(supabase.from("competitions").select("*", { count: "exact", head: true })),
-        count(supabase.from("achievements").select("*", { count: "exact", head: true })),
-        count(supabase.from("page_views").select("*", { count: "exact", head: true })),
+        countOf("profiles"),
+        countOf("profiles", true),
+        countOf("events"),
+        countOf("achievements"),
+        countOf("gallery_items"),
       ]);
-    return { members, activeMembers, projects, events, competitions, achievements, visitors };
-  }, { members: 0, activeMembers: 0, projects: 0, events: 0, competitions: 0, achievements: 0, visitors: 0 });
+
+    return { members, activeMembers, events, achievements, gallery };
+  }, EMPTY_STATS);
 }
 
-export async function getHomepageContent() {
-  return safe<Record<string, string>>(async () => {
-    const supabase = await createClient();
-    const { data } = await supabase.from("settings").select("value").eq("key", "homepage").single();
-    return (data?.value as Record<string, string>) ?? {};
-  }, {});
-}

@@ -1,12 +1,12 @@
 {
   "name": "Avinya — IT & AI Club",
   "short_name": "Avinya",
-  "description": "The IT & AI Club of Emerald Heights International School — projects, events, competitions and club notices.",
+  "description": "The IT & AI Club of The Emerald Heights International School — events, gallery, team and club notices.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#8b5cf6",
+  "background_color": "#0a0a0c",
+  "theme_color": "#0a0a0c",
   "orientation": "portrait-primary",
   "categories": ["education", "productivity"],
   "icons": [
@@ -23,15 +23,15 @@
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
   ],
   "shortcuts": [
-    { "name": "My Dashboard", "url": "/dashboard" },
+    { "name": "Dashboard", "url": "/dashboard" },
     { "name": "Notifications", "url": "/notifications" },
-    { "name": "Projects", "url": "/projects" }
+    { "name": "Gallery", "url": "/gallery" }
   ]
 }

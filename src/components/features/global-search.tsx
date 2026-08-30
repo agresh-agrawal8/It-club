@@ -2,17 +2,23 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Code2, Users, CalendarDays, Trophy, Award, CheckSquare } from "lucide-react";
+import {
+  Search,
+  Users,
+  CalendarDays,
+  Award,
+  CheckSquare,
+  ImageIcon,
+} from "lucide-react";
 import type { SearchResult } from "@/app/api/search/route";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 
 const typeMeta: Record<SearchResult["type"], { icon: React.ElementType; label: string }> = {
-  project: { icon: Code2, label: "Project" },
   member: { icon: Users, label: "Member" },
   event: { icon: CalendarDays, label: "Event" },
-  competition: { icon: Trophy, label: "Competition" },
   achievement: { icon: Award, label: "Achievement" },
+  gallery: { icon: ImageIcon, label: "Photo" },
   task: { icon: CheckSquare, label: "Task" },
 };
 
@@ -52,7 +58,7 @@ export function GlobalSearch() {
           autoFocus
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search projects, members, events, competitions…"
+          placeholder="Search events, members, photos…"
           className="w-full bg-transparent text-base text-white placeholder:text-zinc-500 focus:outline-none"
         />
         {loading && <Spinner />}

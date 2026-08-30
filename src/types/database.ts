@@ -1,27 +1,25 @@
 /**
- * Database types — mirrors supabase/migrations. In a live project these are
- * generated via `supabase gen types typescript`; kept here so the app is
- * fully typed before the CLI is wired up.
+ * Database types — mirrors supabase/migrations.
+ *
+ * Note what is deliberately absent from `Profile`: there is no `email` and no
+ * `member_id`. A member is a name, a password (which lives only in
+ * `auth.users` as a bcrypt hash and is never selected) and one of two roles.
  */
 
-export type UserRole = "visitor" | "member" | "teacher" | "admin" | "super_admin";
-export type ProjectStatus = "draft" | "in_progress" | "completed" | "archived";
+/** Exactly two roles. There is no admin tier above core team. */
+export type UserRole = "member" | "core_team";
+
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
 export type EventStatus = "upcoming" | "ongoing" | "past" | "cancelled";
+/** Competitions are events with an organiser and a result, not a second table. */
+export type EventKind = "workshop" | "competition" | "hackathon" | "talk" | "other";
 export type MediaKind = "image" | "video" | "file";
-export type NotificationType =
-  | "info"
-  | "task"
-  | "event"
-  | "project"
-  | "achievement"
-  | "system";
+export type NotificationType = "info" | "task" | "event" | "achievement" | "system";
 export type SubscribeChannel = "email" | "whatsapp";
 
 export interface Profile {
   id: string;
-  member_id: string | null;
   full_name: string;
   role: UserRole;
   avatar_url: string | null;
@@ -35,47 +33,11 @@ export interface Profile {
   phone: string | null;
   phone_verified: boolean;
   is_active: boolean;
+  /** Set by a core-team password reset; forces a change at next sign-in. */
+  must_change_password: boolean;
   last_active_at: string | null;
   created_at: string;
   updated_at: string;
-}
-
-export interface Project {
-  id: string;
-  slug: string;
-  title: string;
-  summary: string | null;
-  description: string | null;
-  cover_url: string | null;
-  technologies: string[];
-  tags: string[];
-  github_url: string | null;
-  demo_url: string | null;
-  docs_url: string | null;
-  status: ProjectStatus;
-  featured: boolean;
-  view_count: number;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ProjectAuthor {
-  project_id: string;
-  profile_id: string;
-  role: string | null;
-  created_at: string;
-}
-
-export interface ProjectMedia {
-  id: string;
-  project_id: string;
-  kind: MediaKind;
-  url: string;
-  title: string | null;
-  size_bytes: number | null;
-  position: number;
-  created_at: string;
 }
 
 export interface EventRow {
@@ -89,36 +51,29 @@ export interface EventRow {
   venue: string | null;
   registration_url: string | null;
   status: EventStatus;
+  kind: EventKind;
+  organizer: string | null;
+  result: string | null;
   schedule: { time?: string; title?: string; speaker?: string }[];
   created_by: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface Competition {
-  id: string;
-  slug: string;
-  title: string;
-  description: string | null;
-  banner_url: string | null;
-  organizer: string | null;
-  location: string | null;
-  starts_at: string | null;
-  ends_at: string | null;
-  registration_url: string | null;
-  result: string | null;
-  status: EventStatus;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
+/**
+ * A gallery item. The uploader supplies only `image_url` and `title`;
+ * `slug`, `alt_text`, `width` and `height` are all derived server-side so the
+ * upload form stays two fields wide while the public page still gets the
+ * metadata it needs for SEO and for a zero-layout-shift render.
+ */
 export interface GalleryItem {
   id: string;
   title: string | null;
-  caption: string | null;
+  slug: string;
+  alt_text: string | null;
   image_url: string;
-  album: string | null;
+  width: number | null;
+  height: number | null;
   tags: string[];
   position: number;
   created_by: string | null;
@@ -147,7 +102,6 @@ export interface TaskRow {
   deadline: string | null;
   assignee_id: string | null;
   assigned_by: string | null;
-  project_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -183,24 +137,5 @@ export interface Submission {
   file_url: string | null;
   link_url: string | null;
   handled: boolean;
-  created_at: string;
-}
-
-/** Convenience composites returned by joined queries. */
-export interface ProjectWithAuthors extends Project {
-  authors: Pick<Profile, "id" | "full_name" | "avatar_url" | "member_id">[];
-  media?: ProjectMedia[];
-}
-
-export interface JoinRequest {
-  id: string;
-  name: string;
-  email: string;
-  grade: string | null;
-  phone: string | null;
-  interests: string[];
-  experience: string | null;
-  why: string | null;
-  status: "pending" | "approved" | "rejected";
   created_at: string;
 }

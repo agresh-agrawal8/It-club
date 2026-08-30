@@ -7,6 +7,7 @@ import { getEvent, getEventSettings, countRegistered } from "@/lib/events/engine
 import { registrationOpen } from "@/lib/events/rules";
 import { EventRegisterForm } from "@/components/events/register-form";
 import { EventMark } from "@/components/events/shell/event-mark";
+import { eventBasePath } from "@/lib/events/paths";
 
 export const metadata = { title: "Register" };
 
@@ -26,7 +27,7 @@ export default async function EventRegisterPage({
 
   // The same rule the server action enforces — the UI just explains it.
   const status = registrationOpen(event, settings, registered);
-  const base = `/events/hub/${event.slug}`;
+  const base = eventBasePath(event.slug);
 
   return (
     <Container className="grid gap-8 py-14 lg:grid-cols-[1fr_1.5fr]">

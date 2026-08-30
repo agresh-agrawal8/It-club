@@ -11,6 +11,16 @@ export const metadata: Metadata = {
   description: "Awards, placements and milestones earned by the EHIS IT Club.",
 };
 
+/**
+ * Public content changes when the core team publishes something, and the
+ * mutating actions call revalidatePath() for exactly that. Between those
+ * events this page is served from the cache instead of re-querying Postgres
+ * on every visit — which is what makes navigation feel instant rather than
+ * waiting on a round-trip per page.
+ */
+export const revalidate = 300;
+
+
 export default async function AchievementsPage() {
   const achievements = await getAchievements();
 

@@ -15,6 +15,7 @@ import {
 import { getEventActor } from "@/lib/events/auth";
 import { missionState } from "@/lib/events/rules";
 import type { MissionProgress, MissionState } from "@/lib/events/types";
+import { eventBasePath } from "@/lib/events/paths";
 
 export const metadata = { title: "Missions" };
 
@@ -51,7 +52,7 @@ export default async function MissionsPage({
   if (!can(settings, "missions_enabled")) notFound();
 
   const actor = await getEventActor(event.id, event.slug);
-  const base = `/events/hub/${event.slug}`;
+  const base = eventBasePath(event.slug);
 
   const [missions, deps, categories] = await Promise.all([
     getParticipantMissions(event.id),

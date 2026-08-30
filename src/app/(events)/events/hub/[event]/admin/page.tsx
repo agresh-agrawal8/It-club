@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Radio, Trash2, Users, Megaphone, Rocket, Settings2, ArrowLeft } from "lucide-react";
+import { Radio, Trash2, Users, Megaphone, Rocket, ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import {
   setEventStatusAction,
 } from "@/lib/events/actions/admin";
 import { timeAgo } from "@/lib/utils";
+import { eventBasePath } from "@/lib/events/paths";
 
 export const metadata = { title: "Organiser console" };
 
@@ -55,7 +56,9 @@ export default async function EventAdminPage({
   // Organiser gate. Club admins (is_admin) and event admins both pass.
   await requireEventAdmin(event.id, event.slug);
 
-  const [settings, registered, missions, announcements] = await Promise.all([
+  // getEventSettings still runs: it is what raises if the event is
+  // misconfigured, even though this page renders nothing from it.
+  const [, registered, missions, announcements] = await Promise.all([
     getEventSettings(event.id),
     countRegistered(event.id),
     getMissions(event.id),
@@ -71,7 +74,7 @@ export default async function EventAdminPage({
     .eq("status", "pending")
     .limit(50);
 
-  const base = `/events/hub/${event.slug}`;
+  const base = eventBasePath(event.slug);
   const completedMissions = missions.filter((m) => m.status === "open").length;
 
   return (

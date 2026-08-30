@@ -1,350 +1,518 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowRight,
   ArrowUpRight,
-  Code2,
-  Smartphone,
-  BrainCircuit,
-  Cpu,
-  ShieldCheck,
-  Binary,
   CalendarDays,
+  Cpu,
+  Code2,
+  MapPin,
+  Palette,
+  Rocket,
+  Users,
 } from "lucide-react";
 import { Container } from "@/components/ui/container";
-import { ButtonLink } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { SectionHeading } from "@/components/ui/section-heading";
+import { MeshCard } from "@/components/ui/mesh-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { LightBeams } from "@/components/landing/light-beams";
-import { Faq } from "@/components/landing/faq";
-import { Testimonials } from "@/components/landing/testimonials";
-import { IdeaForm } from "@/components/landing/idea-form";
-import { SubmissionForm } from "@/components/landing/submission-form";
-import { Reveal } from "@/components/landing/reveal";
-import { ProjectCard } from "@/components/features/project-card";
-import { EventCard } from "@/components/features/event-card";
-import {
-  getFeaturedProjects,
-  getUpcomingEvents,
-  getAchievements,
-  getPlatformStats,
-  getHomepageContent,
-  getTeam,
-} from "@/lib/data";
-import { roleLabel } from "@/lib/utils";
+import { getUpcomingEvents, getGallery, getTeam } from "@/lib/data";
+import { SITE, absoluteUrl } from "@/lib/site";
+import { formatDate, isCoreTeam, initials } from "@/lib/utils";
 
-const SERVICES = [
-  { icon: Code2, title: "Web Development", desc: "Modern, responsive web apps built with React and Next.js." },
-  { icon: Smartphone, title: "App Development", desc: "Android and cross-platform apps that solve real problems." },
-  { icon: BrainCircuit, title: "AI & Machine Learning", desc: "Models, agents and data projects that actually ship." },
-  { icon: Cpu, title: "Robotics & IoT", desc: "Microcontrollers, sensors and automation you can hold." },
-  { icon: ShieldCheck, title: "Cybersecurity", desc: "CTFs, ethical hacking and secure-by-default thinking." },
-  { icon: Binary, title: "Competitive Programming", desc: "Algorithms, data structures and olympiad training." },
-];
+export const metadata: Metadata = {
+  // `absolute` opts out of the "%s · Avinya" template from the root layout,
+  // which would otherwise render "Avinya — … · Avinya".
+  title: { absolute: `${SITE.name} — ${SITE.tagline}` },
+  description: SITE.description,
+  alternates: { canonical: "/" },
+};
 
-const FAQS = [
-  {
-    q: "How do I join Avinya?",
-    a: "Membership is open to all EHIS students. Reach out through the form below or talk to any core team member — we'll set up your member account and you can start publishing projects right away.",
-  },
-  {
-    q: "Do I need to already know how to code?",
-    a: "Not at all. We have members at every level, from complete beginners to students shipping full-stack apps. Sessions and mentoring are built around wherever you're starting.",
-  },
-  {
-    q: "What kind of projects can I build?",
-    a: "Anything you're curious about — web apps, games, robotics, AI experiments, security tools. Your projects are yours; you publish them to the showcase without waiting for approval.",
-  },
-  {
-    q: "How often does the club meet?",
-    a: "We run regular workshops, hack nights and build sessions through the term. Everything upcoming is listed on the Events page and your member calendar.",
-  },
-  {
-    q: "Can I compete in hackathons through the club?",
-    a: "Yes. We enter inter-school hackathons, olympiads and online contests as a team, and the club supports you with practice, mentoring and logistics.",
-  },
-];
+/**
+ * Public content changes when the core team publishes something, and the
+ * mutating actions call revalidatePath() for exactly that. Between those
+ * events this page is served from the cache instead of re-querying Postgres
+ * on every visit — which is what makes navigation feel instant rather than
+ * waiting on a round-trip per page.
+ */
+export const revalidate = 300;
 
-const TESTIMONIALS = [
+
+/**
+ * The homepage.
+ *
+ * Everything below renders from real rows. Where a table is empty the section
+ * shows a designed empty state rather than sample content — an events strip
+ * with three invented hackathons in it would be the most damaging thing on the
+ * page, because a visitor cannot tell it is fake.
+ *
+ * This is a server component end to end; the only client JavaScript the page
+ * ships is the navigation drawer and the subscribe form.
+ */
+
+/** Areas the club actually runs. Not aspirational filler. */
+const DISCIPLINES = [
   {
-    quote:
-      "Joining Avinya completely changed how I think about building things. I went from writing my first HTML page to shipping a full project that people actually use — with seniors who genuinely wanted to help.",
-    name: "Club Member",
-    role: "Grade 11",
+    icon: Code2,
+    title: "Software",
+    body: "Web apps, tooling and automation — built properly, shipped, and then maintained.",
+    accent: "violet",
+    origin: "top-right",
   },
   {
-    quote:
-      "The best part is nobody gatekeeps here. You have an idea, you build it, you put it on the site. That freedom is why our members keep coming back and keep shipping.",
-    name: "Core Team",
-    role: "Avinya",
+    icon: Cpu,
+    title: "Robotics & Hardware",
+    body: "Microcontrollers, sensors and the unglamorous work of making them behave.",
+    accent: "electric",
+    origin: "top-left",
   },
-];
+  {
+    icon: Rocket,
+    title: "AI & Machine Learning",
+    body: "Models applied to problems we actually have, not benchmarks we already know.",
+    accent: "cyan",
+    origin: "top-right",
+  },
+  {
+    icon: Palette,
+    title: "Design",
+    body: "Interface and identity work, so what the club builds is worth looking at.",
+    accent: "electric",
+    origin: "top-right",
+  },
+  {
+    icon: CalendarDays,
+    title: "Hackathons",
+    body: "We run Infinium and Code Red — build weekends with real deadlines and real judging.",
+    accent: "violet",
+    origin: "top-left",
+  },
+  {
+    icon: Users,
+    title: "Teaching",
+    body: "Members run the sessions. Explaining a thing is how you find out you know it.",
+    accent: "cyan",
+    origin: "top-left",
+  },
+] as const;
 
 export default async function HomePage() {
-  const [projects, events, achievements, stats, content, team] = await Promise.all([
-    getFeaturedProjects(3),
+  // One parallel round of queries for the whole page.
+  const [events, gallery, team] = await Promise.all([
     getUpcomingEvents(3),
-    getAchievements(),
-    getPlatformStats(),
-    getHomepageContent(),
+    getGallery(),
     getTeam(),
   ]);
 
-  const lead = team.find((m) => m.role === "super_admin") ?? team[0];
+  const featuredGallery = gallery.slice(0, 6);
+  const coreTeam = team.filter((m) => isCoreTeam(m.role));
+
+  /**
+   * Structured data. Describes the club as an organisation at a school, which
+   * is what it is — no fabricated ratings, member counts or awards.
+   */
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE.name,
+    alternateName: `${SITE.name} IT & AI Club`,
+    description: SITE.description,
+    url: SITE.url,
+    logo: absoluteUrl(SITE.ogImage),
+    email: SITE.contact.email,
+    parentOrganization: { "@type": "School", name: SITE.school },
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: SITE.city,
+      addressRegion: SITE.region,
+      addressCountry: SITE.country,
+    },
+  };
 
   return (
     <>
-      {/* ═══ HERO ═══ */}
-      <section className="relative overflow-hidden">
-        <LightBeams />
-        <div className="dot-grid pointer-events-none absolute inset-0 opacity-[0.35] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]" />
+      <script
+        type="application/ld+json"
+        // Serialised from an object literal we control — no user input reaches it.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
-        <Container className="relative flex flex-col items-center gap-7 pb-16 pt-24 text-center md:pt-32">
-          <Badge variant="accent" className="animate-fade-in rounded-full">
-            {content.hero_eyebrow ?? "Avinya · Emerald Heights International School"}
-          </Badge>
+      {/* ── Hero ───────────────────────────────────────────────────────
+          Full-bleed stage: the artwork spans the whole viewport, running
+          edge to edge and up behind the transparent nav, rather than sitting
+          inside a bordered card.
 
-          <h1 className="animate-fade-up max-w-4xl text-balance text-4xl font-semibold leading-[1.06] tracking-tighter text-white sm:text-5xl lg:text-6xl xl:text-7xl">
-            {content.hero_title ?? "Where ideas compile into reality"}
-          </h1>
+          Art direction is a real <picture> element — the phone downloads only
+          the portrait crop and the desktop only the landscape one. Loading
+          both and hiding one with CSS is the usual way this gets done, and it
+          doubles the hero's weight on the device that can least afford it.
 
-          <p className="max-w-2xl animate-fade-up text-balance text-base leading-relaxed text-zinc-400">
-            {content.hero_subtitle ??
-              "Avinya is the official IT & AI Club of Emerald Heights — projects, events, competitions and a community of student makers."}
-          </p>
+          The image is decorative, so alt is empty; the headline carries the
+          meaning. fetchPriority="high" marks it as the LCP element. */}
+      <section className="relative isolate -mt-[68px] w-full overflow-hidden">
+        <picture>
+          <source
+            media="(max-width: 767px)"
+            srcSet="/hero/hero-mobile.webp"
+            width={1100}
+            height={1353}
+          />
+          <img
+            src="/hero/hero-desktop.webp"
+            alt=""
+            aria-hidden
+            width={1448}
+            height={1086}
+            fetchPriority="high"
+            decoding="async"
+            className="hero-media hero-blend absolute inset-0 z-0 h-full w-full object-cover object-[70%_center] md:object-[76%_center]"
+          />
+        </picture>
 
-          <ButtonLink
-            href={content.primary_cta_href ?? "/projects"}
-            variant="brand"
-            className="animate-fade-up rounded-full"
-          >
-            {content.primary_cta_label ?? "Explore projects"}
-            <ArrowUpRight className="h-4 w-4" />
-          </ButtonLink>
-        </Container>
+        {/* Scrim. Reads bottom-up on phones, where the text sits under the
+            figure, and left-to-right on desktop, where it sits beside it. */}
+        <div
+          className="hero-blend absolute inset-0 z-[1] bg-gradient-to-t from-[#0a0a0c] via-[#0a0a0c]/75 to-[#0a0a0c]/25 md:bg-gradient-to-r md:from-[#0a0a0c] md:via-[#0a0a0c]/75 md:to-transparent"
+          aria-hidden
+        />
+        <div
+          className="hero-blend pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(120%_95%_at_0%_45%,color-mix(in_oklab,var(--color-brand-600)_18%,transparent),transparent_64%)]"
+          aria-hidden
+        />
+        <Container className="relative z-10">
+          <div className="flex min-h-[38rem] flex-col justify-end pb-20 pt-40 md:min-h-[44rem] md:max-w-[58%] md:justify-center md:py-40 lg:min-h-[48rem]">
+            <span className="hairline-gradient mb-7 inline-flex w-fit items-center gap-2.5 rounded-full bg-black/25 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-2 backdrop-blur-sm">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-electric-400 opacity-75 [animation:var(--animate-pulse-ring)]" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-electric-400" />
+              </span>
+              {SITE.school} · {SITE.city}
+            </span>
 
-        {/* Showcase row — three project previews, centre one raised */}
-        <Container className="relative pb-24">
-          {projects.length > 0 ? (
-            <div className="grid items-center gap-5 md:grid-cols-3">
-              {projects.map((p, i) => (
-                <div
-                  key={p.id}
-                  className={i === 1 ? "md:-translate-y-6 md:scale-[1.04]" : "md:opacity-90"}
-                >
-                  <ProjectCard project={p} />
-                </div>
-              ))}
+            <h1 className="headline text-balance text-[clamp(2.6rem,1.2rem+6.4vw,6rem)] text-white">
+              Avinya
+              <br />
+              <span className="text-club-gradient">Club</span>
+            </h1>
+
+            <p className="headline-wide mt-5 text-[clamp(0.85rem,0.7rem+0.5vw,1.2rem)] text-electric-300">
+              The AI Club
+            </p>
+
+            <p className="mt-6 max-w-lg text-pretty text-base leading-relaxed text-ink-2">
+              We write software, build hardware, run hackathons and compete as a team.
+              Everything on this site was made by students here.
+            </p>
+
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link
+                href="/events"
+                className="sheen-host group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-brand-400 to-brand-600 px-7 py-4 text-sm font-medium text-white shadow-[0_10px_36px_-12px_var(--color-brand-500)] transition-[transform,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out-quart)] hover:-translate-y-px hover:shadow-[0_14px_44px_-12px_var(--color-brand-500)]"
+              >
+                <span className="sheen-line" aria-hidden />
+                See what&apos;s on
+                <ArrowRight
+                  className="h-4 w-4 transition-transform duration-[var(--duration-fast)] group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              </Link>
+              <Link
+                href="/gallery"
+                className="hairline-gradient inline-flex items-center justify-center gap-2 rounded-2xl bg-black/30 px-7 py-4 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/[0.07]"
+              >
+                Look around
+                <ArrowUpRight className="h-4 w-4" aria-hidden />
+              </Link>
             </div>
-          ) : (
-            <EmptyState
-              icon={<Code2 className="h-6 w-6" />}
-              title="The showcase is warming up"
-              description="Member projects will appear here as soon as they're published."
+          </div>
+        </Container>
+      </section>
+
+      {/* ── About ─────────────────────────────────────────────────────── */}
+      <section id="about" className="scroll-mt-24 py-20 md:py-28">
+        <Container>
+          <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+            <SectionHeading
+              eyebrow="About the club"
+              title={
+                <>
+                  A workshop,
+                  <br />
+                  not a classroom.
+                </>
+              }
             />
+            <div className="flex flex-col gap-6 text-base leading-relaxed text-ink-2 md:text-lg">
+              <p>
+                Avinya exists because there is a difference between being taught how something
+                works and building it yourself. Members pick problems, form teams, and ship —
+                with the rest of the club as the first people to try it and the first to say
+                what is wrong with it.
+              </p>
+              <p>
+                We meet through the school year to build, to prepare for competitions, and to run
+                sessions for each other. There is no entrance test and no prerequisite beyond
+                wanting to make something. The seniors were beginners two years ago.
+              </p>
+              <div className="hairline-gradient rounded-2xl p-6">
+                <p className="text-pretty text-sm leading-relaxed text-ink-3">
+                  Everything published here — this site included — is designed, built and
+                  maintained by club members.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* ── What we do ────────────────────────────────────────────────── */}
+      <section className="py-20 md:py-28">
+        <Container className="flex flex-col gap-14">
+          <SectionHeading
+            eyebrow="What we do"
+            title="Six things, done properly"
+            description="The club is organised around work that produces something at the end of it."
+          />
+
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {DISCIPLINES.map(({ icon: Icon, title, body, accent, origin }) => (
+              <li key={title} className="h-full">
+                <MeshCard
+                  as="article"
+                  accent={accent}
+                  origin={origin}
+                  className="flex h-full flex-col p-7"
+                >
+                  <Icon className="h-6 w-6 text-white/90" strokeWidth={1.4} aria-hidden />
+                  <h3 className="mt-8 text-lg font-semibold tracking-tight text-white">{title}</h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-ink-3">{body}</p>
+                </MeshCard>
+              </li>
+            ))}
+          </ul>
+        </Container>
+      </section>
+
+      {/* ── Events ────────────────────────────────────────────────────── */}
+      <section className="py-20 md:py-28">
+        <Container className="flex flex-col gap-14">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <SectionHeading eyebrow="What's on" title="Coming up" />
+            <Link
+              href="/events"
+              className="group inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-3 transition-colors hover:text-white"
+            >
+              All events
+              <ArrowRight
+                className="h-3.5 w-3.5 transition-transform duration-[var(--duration-fast)] group-hover:translate-x-0.5"
+                aria-hidden
+              />
+            </Link>
+          </div>
+
+          {events.length === 0 ? (
+            <EmptyState
+              icon={<CalendarDays className="h-6 w-6" aria-hidden />}
+              title="Nothing scheduled right now"
+              description="The next session, workshop or hackathon will be announced here first. Subscribe below and you'll hear about it."
+            />
+          ) : (
+            <ol className="flex flex-col gap-4">
+              {events.map((event) => (
+                <li key={event.id}>
+                  <Link
+                    href={`/events/${event.slug}`}
+                    className="glass glass-hover hairline-gradient group grid gap-5 rounded-3xl p-7 sm:grid-cols-[auto_1fr_auto] sm:items-center"
+                  >
+                    <div className="flex min-w-[4.5rem] flex-col items-center justify-center rounded-2xl bg-brand-500/10 px-4 py-3">
+                      <time
+                        dateTime={event.starts_at}
+                        className="headline text-2xl leading-none text-white"
+                      >
+                        {new Date(event.starts_at).toLocaleDateString("en-GB", { day: "2-digit" })}
+                      </time>
+                      <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-brand-300">
+                        {new Date(event.starts_at).toLocaleDateString("en-GB", { month: "short" })}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <h3 className="text-lg font-semibold tracking-tight text-white">
+                        {event.title}
+                      </h3>
+                      {event.description && (
+                        <p className="line-clamp-2 text-sm leading-relaxed text-ink-3">
+                          {event.description}
+                        </p>
+                      )}
+                      <div className="mt-1 flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-4">
+                        <span>{formatDate(event.starts_at)}</span>
+                        {event.venue && (
+                          <span className="flex items-center gap-1.5">
+                            <MapPin className="h-3 w-3" aria-hidden />
+                            {event.venue}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <ArrowUpRight
+                      className="hidden h-5 w-5 text-ink-4 transition-colors group-hover:text-white sm:block"
+                      aria-hidden
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ol>
           )}
         </Container>
       </section>
 
-      {/* ═══ MANIFESTO + STATS ═══ */}
-      <section className="border-t border-white/[0.07] py-24">
-        <Container className="grid gap-16 lg:grid-cols-[1.35fr_1fr]">
-          <Reveal className="flex flex-col items-start gap-10">
-            <p className="text-balance text-2xl font-medium leading-[1.35] tracking-tight text-white md:text-[2rem]">
-              Technology isn&apos;t just about code — it&apos;s about building things that solve
-              real problems, teach you something new, and outlast the term they were made in.
-            </p>
-            {lead && (
-              <div className="flex items-center gap-3 rounded-full border border-white/10 py-2 pl-2 pr-5">
-                <Avatar name={lead.full_name || "Core team"} src={lead.avatar_url} size="md" />
-                <div>
-                  <div className="text-[11px] text-zinc-500">{roleLabel(lead.role)}</div>
-                  <div className="text-sm font-medium text-white">{lead.full_name}</div>
-                </div>
-              </div>
-            )}
-          </Reveal>
-
-          <div className="flex flex-col justify-center gap-10">
-            {[
-              { value: stats.members, label: "Club Members" },
-              { value: stats.projects, label: "Projects Shipped" },
-              { value: stats.events + stats.competitions, label: "Events & Competitions" },
-            ].map((s, i) => (
-              <Reveal key={s.label} delay={i * 120}>
-                <div className="text-5xl font-semibold tracking-tighter text-white md:text-6xl">
-                  {s.value}
-                  <span className="text-brand-400">+</span>
-                </div>
-                <div className="mt-1 text-sm text-zinc-500">{s.label}</div>
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
-
-      {/* ═══ WHAT WE DO ═══ */}
-      <section className="py-24">
-        <Container className="flex flex-col items-center gap-14">
-          <Reveal className="flex max-w-2xl flex-col items-center gap-4 text-center">
-            <h2 className="text-balance text-4xl font-semibold tracking-tighter text-white md:text-5xl">
-              What We Do
-            </h2>
-            <p className="text-balance text-zinc-400">
-              Six tracks members explore — pick one, mix several, or invent your own.
-            </p>
-          </Reveal>
-
-          <div className="grid w-full gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {SERVICES.map(({ icon: Icon, title, desc }, i) => (
-              <Reveal key={title} delay={(i % 3) * 100} className="glass glass-hover relative overflow-hidden rounded-3xl p-7">
-                <div
-                  className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-60"
-                  style={{
-                    background:
-                      "radial-gradient(closest-side, color-mix(in oklab, var(--color-brand-500) 30%, transparent), transparent)",
-                    filter: "blur(24px)",
-                  }}
-                />
-                <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-brand-500/15 text-brand-300">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <h3 className="relative mt-14 text-lg font-semibold tracking-tight text-white">
-                  {title}
-                </h3>
-                <p className="relative mt-2 text-sm leading-relaxed text-zinc-400">{desc}</p>
-              </Reveal>
-            ))}
-          </div>
-
-          <ButtonLink href="/projects" variant="secondary" className="rounded-full">
-            View more projects <ArrowUpRight className="h-4 w-4" />
-          </ButtonLink>
-        </Container>
-      </section>
-
-      {/* ═══ UPCOMING EVENTS ═══ */}
-      {events.length > 0 && (
-        <section className="py-16">
-          <Container className="flex flex-col gap-10">
-            <div className="flex flex-wrap items-end justify-between gap-6">
-              <div>
-                <span className="eyebrow text-brand-300">What&apos;s next</span>
-                <h2 className="mt-3 text-4xl font-semibold tracking-tighter text-white md:text-5xl">
-                  Upcoming events
-                </h2>
-              </div>
+      {/* ── Gallery ───────────────────────────────────────────────────── */}
+      <section className="py-20 md:py-28">
+        <Container className="flex flex-col gap-14">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <SectionHeading eyebrow="Gallery" title="From the lab" />
+            {featuredGallery.length > 0 && (
               <Link
-                href="/events"
-                className="flex items-center gap-1.5 text-sm text-zinc-400 transition-colors hover:text-white"
+                href="/gallery"
+                className="group inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-3 transition-colors hover:text-white"
               >
-                All events <ArrowRight className="h-4 w-4" />
+                Full gallery
+                <ArrowRight
+                  className="h-3.5 w-3.5 transition-transform duration-[var(--duration-fast)] group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              </Link>
+            )}
+          </div>
+
+          {featuredGallery.length === 0 ? (
+            <EmptyState
+              title="No photographs yet"
+              description="Pictures from sessions, builds and competitions will appear here as they are added."
+            />
+          ) : (
+            <ul className="grid grid-cols-2 gap-4 md:grid-cols-3">
+              {featuredGallery.map((item, index) => (
+                <li
+                  key={item.id}
+                  className={
+                    // First tile spans two columns on desktop, which gives the
+                    // grid an editorial rhythm instead of a uniform contact sheet.
+                    index === 0 ? "md:col-span-2 md:row-span-2" : undefined
+                  }
+                >
+                  <figure className="hairline-gradient group relative h-full overflow-hidden rounded-3xl">
+                    <Image
+                      src={item.image_url}
+                      alt={item.alt_text ?? item.title ?? ""}
+                      width={item.width ?? 1200}
+                      height={item.height ?? 900}
+                      sizes={
+                        index === 0
+                          ? "(max-width: 768px) 50vw, 66vw"
+                          : "(max-width: 768px) 50vw, 33vw"
+                      }
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-[var(--duration-slow)] ease-[var(--ease-out-soft)] group-hover:scale-[1.03]"
+                    />
+                    {item.title && (
+                      <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-4 pt-10 text-xs font-medium text-white">
+                        {item.title}
+                      </figcaption>
+                    )}
+                  </figure>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Container>
+      </section>
+
+      {/* ── Team ──────────────────────────────────────────────────────── */}
+      {coreTeam.length > 0 && (
+        <section className="py-20 md:py-28">
+          <Container className="flex flex-col gap-14">
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <SectionHeading eyebrow="Core team" title="Who runs it" />
+              <Link
+                href="/team"
+                className="group inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-3 transition-colors hover:text-white"
+              >
+                Everyone
+                <ArrowRight
+                  className="h-3.5 w-3.5 transition-transform duration-[var(--duration-fast)] group-hover:translate-x-0.5"
+                  aria-hidden
+                />
               </Link>
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {events.map((e, i) => (
-                <Reveal key={e.id} delay={i * 100}>
-                  <EventCard event={e} />
-                </Reveal>
+
+            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {coreTeam.slice(0, 4).map((member) => (
+                <li key={member.id}>
+                  <article className="glass hairline-gradient flex h-full flex-col items-center gap-4 rounded-3xl p-7 text-center">
+                    {member.avatar_url ? (
+                      <Image
+                        src={member.avatar_url}
+                        alt=""
+                        aria-hidden
+                        width={72}
+                        height={72}
+                        loading="lazy"
+                        className="h-18 w-18 rounded-full object-cover ring-1 ring-white/15"
+                      />
+                    ) : (
+                      <span
+                        aria-hidden
+                        className="headline-wide flex h-[72px] w-[72px] items-center justify-center rounded-full bg-brand-500/15 text-lg text-brand-200 ring-1 ring-white/15"
+                      >
+                        {initials(member.full_name)}
+                      </span>
+                    )}
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm font-semibold text-white">{member.full_name}</h3>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-brand-300">
+                        {member.headline || "Core team"}
+                      </p>
+                    </div>
+                  </article>
+                </li>
               ))}
-            </div>
+            </ul>
           </Container>
         </section>
       )}
 
-      {/* ═══ FAQ ═══ */}
-      <section className="relative overflow-hidden py-24">
-        <div
-          className="pointer-events-none absolute -left-40 top-1/4 h-[420px] w-[420px] rounded-full opacity-40"
-          style={{
-            background:
-              "radial-gradient(closest-side, color-mix(in oklab, var(--color-brand-600) 40%, transparent), transparent)",
-            filter: "blur(90px)",
-          }}
-        />
-        <Container className="relative grid gap-14 lg:grid-cols-[1fr_1.25fr]">
-          <div className="flex flex-col gap-6">
-            <h2 className="text-balance text-4xl font-semibold tracking-tighter text-white md:text-5xl">
-              Got questions? We&apos;ve got answers.
-            </h2>
-            <p className="max-w-sm text-sm leading-relaxed text-zinc-400">
-              Everything students usually ask before joining Avinya — how it works, what you&apos;ll
-              build, and how to get started.
-            </p>
-            <ButtonLink href="/contact" variant="brand" size="sm" className="w-fit rounded-full">
-              Get started <ArrowUpRight className="h-4 w-4" />
-            </ButtonLink>
+      {/* ── Closing CTA ───────────────────────────────────────────────── */}
+      <section className="pb-8 pt-20 md:pt-28">
+        <Container>
+          <div className="glass-deep hairline-gradient grain relative overflow-hidden rounded-[2rem] px-8 py-20 text-center md:px-16 md:py-28">
+            <div className="glow-club pointer-events-none absolute inset-0" aria-hidden />
+            <div className="relative flex flex-col items-center gap-7">
+              <span className="eyebrow text-champagne-300">Join us</span>
+              <h2 className="headline text-balance text-[clamp(2rem,1.2rem+3.6vw,4rem)] text-white">
+                Build the future
+                <br />
+                <span className="text-club-gradient">with us.</span>
+              </h2>
+              <p className="max-w-xl text-pretty text-base leading-relaxed text-ink-2">
+                Membership is open to students of {SITE.school}. Come to a session, or talk to
+                any of the core team — that is the whole process.
+              </p>
+              <Link
+                href="/contact"
+                className="sheen-host group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-8 py-4 text-sm font-medium text-zinc-950 transition-transform duration-[var(--duration-fast)] ease-[var(--ease-out-quart)] hover:-translate-y-px"
+              >
+                <span className="sheen-line" aria-hidden />
+                Get in touch
+                <ArrowRight
+                  className="h-4 w-4 transition-transform duration-[var(--duration-fast)] group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              </Link>
+            </div>
           </div>
-          <Faq items={FAQS} />
-        </Container>
-      </section>
-
-      {/* ═══ TESTIMONIALS ═══ */}
-      <section className="py-16">
-        <Container className="flex flex-col items-center gap-12">
-          <h2 className="text-balance text-center text-4xl font-semibold tracking-tighter text-white md:text-5xl">
-            What our members say
-          </h2>
-          <div className="w-full max-w-4xl">
-            <Testimonials
-              items={TESTIMONIALS}
-              reviewCount={`${stats.members} member${stats.members === 1 ? "" : "s"} and growing`}
-            />
-          </div>
-        </Container>
-      </section>
-
-      {/* ═══ GOT AN IDEA — enquiry form ═══ */}
-      <section className="py-24">
-        <Container className="grid gap-14 lg:grid-cols-[1fr_1.1fr]">
-          <div className="flex flex-col gap-6">
-            <h2 className="text-balance text-4xl font-semibold tracking-tighter text-white md:text-5xl">
-              Got a great idea?
-            </h2>
-            <p className="max-w-md text-sm leading-relaxed text-zinc-400">
-              Share it with us and let&apos;s turn it into something real. Whether you want to join,
-              collaborate or run a workshop — we&apos;d love to hear from you.
-            </p>
-
-            {achievements.length > 0 && (
-              <div className="mt-2 flex flex-col gap-3">
-                <span className="eyebrow text-zinc-600">Recent wins</span>
-                {achievements.slice(0, 3).map((a) => (
-                  <div
-                    key={a.id}
-                    className="glass flex items-center gap-3 rounded-2xl px-4 py-3"
-                  >
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" />
-                    <span className="truncate text-sm text-zinc-300">{a.title}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="glass-deep rounded-3xl p-7 md:p-9">
-            <IdeaForm />
-          </div>
-        </Container>
-      </section>
-
-      {/* ═══ SUBMIT YOUR WORK — competition / company / content ═══ */}
-      <section className="border-t border-white/[0.07] py-24" id="submit">
-        <Container className="flex flex-col gap-12">
-          <Reveal className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-            <span className="eyebrow text-brand-300">Submissions</span>
-            <h2 className="text-balance text-4xl font-semibold tracking-tighter text-white md:text-5xl">
-              Submit your work
-            </h2>
-            <p className="text-balance text-sm leading-relaxed text-zinc-400">
-              Competition entries, documents for company and internship drives, or content for the
-              club — drop it here and the core team will pick it up.
-            </p>
-          </Reveal>
-          <Reveal delay={120} className="glass-deep mx-auto w-full max-w-3xl rounded-3xl p-7 md:p-9">
-            <SubmissionForm />
-          </Reveal>
         </Container>
       </section>
     </>

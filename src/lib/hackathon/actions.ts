@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
+import { requireCoreTeam } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { HACK_TAG } from "./data";
 import { ENVELOPES, type MemberRole } from "./content";
@@ -10,7 +10,7 @@ import { ENVELOPES, type MemberRole } from "./content";
  * Infinium — core team (organiser) actions.
  *
  * Every export of a `"use server"` module is a live POST endpoint, so each one
- * authorises for itself with `requireAdmin()`. There is no judge role and no
+ * authorises for itself with `requireCoreTeam()`. There is no judge role and no
  * team-side write anywhere in this module: after the move to offline judging,
  * the only people who write hackathon data are club admins.
  */
@@ -40,7 +40,7 @@ function revalidateHack() {
 /* ─────────────────────────── Announcements ─────────────────────────── */
 
 export async function postAnnouncementAction(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
 
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
@@ -59,7 +59,7 @@ export async function postAnnouncementAction(_prev: unknown, formData: FormData)
 /* ─────────────────────────── Teams ─────────────────────────── */
 
 export async function updateTeamDetailsAction(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Missing team." };
 
@@ -103,7 +103,7 @@ export async function updateTeamDetailsAction(_prev: unknown, formData: FormData
  * CASCADE, so the exact team name is required as confirmation.
  */
 export async function deleteTeamAction(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const id = String(formData.get("id") ?? "");
   const confirmName = String(formData.get("confirm_name") ?? "").trim();
   if (!id) return { error: "Missing team." };
@@ -143,7 +143,7 @@ function humanise(message: string) {
  * which meant a rejected assignment looked identical to a successful one.
  */
 export async function assignEnvelopeAction(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const teamId = String(formData.get("team_id") ?? "");
   const raw = String(formData.get("envelope_no") ?? "").trim();
   if (!teamId) return { error: "Missing team." };
@@ -181,7 +181,7 @@ export async function assignEnvelopeAction(_prev: unknown, formData: FormData) {
  * still free, done in one transaction so it cannot half-complete.
  */
 export async function drawEnvelopesAction(_prev: unknown, _formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
 
   const { data, error } = await createAdminClient().rpc("hack_draw_envelopes");
   if (error) return { error: humanise(error.message) };
@@ -198,7 +198,7 @@ export async function drawEnvelopesAction(_prev: unknown, _formData: FormData) {
 
 /** Unassign every envelope — a reset before a fresh draw. */
 export async function clearEnvelopesAction(_prev: unknown, _formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
 
   const { data, error } = await createAdminClient().rpc("hack_clear_envelopes");
   if (error) return { error: humanise(error.message) };
@@ -255,7 +255,7 @@ async function checkComposition(
 }
 
 export async function updateMemberAction(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const memberId = String(formData.get("member_id") ?? "");
   const teamId = String(formData.get("team_id") ?? "");
   if (!memberId || !teamId) return { error: "Missing member." };
@@ -302,7 +302,7 @@ export async function updateMemberAction(_prev: unknown, formData: FormData) {
 }
 
 export async function addMemberAction(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const teamId = String(formData.get("team_id") ?? "");
   if (!teamId) return { error: "Missing team." };
 
@@ -345,7 +345,7 @@ export async function addMemberAction(_prev: unknown, formData: FormData) {
 }
 
 export async function removeMemberAction(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const memberId = String(formData.get("member_id") ?? "");
   const teamId = String(formData.get("team_id") ?? "");
   if (!memberId || !teamId) return { error: "Missing member." };
@@ -389,7 +389,7 @@ const SHEET_TYPES: Record<string, string> = {
  * entered during the closing ceremony are never visible to teams.
  */
 export async function saveResultAction(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const teamId = String(formData.get("team_id") ?? "");
   if (!teamId) return { error: "Missing team." };
 
@@ -455,7 +455,7 @@ export async function saveResultAction(_prev: unknown, formData: FormData) {
 
 /** Publish or unpublish one team's result. */
 export async function toggleResultPublishedAction(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const teamId = String(formData.get("team_id") ?? "");
   const published = formData.get("published") === "true";
   if (!teamId) return { error: "Missing team." };
@@ -490,7 +490,7 @@ export async function toggleResultPublishedAction(_prev: unknown, formData: Form
 
 /** Publish every entered result at once — for the closing ceremony. */
 export async function publishAllResultsAction(_prev?: unknown, _formData?: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
 
   const { data, error } = await createAdminClient()
     .from("hack_results")
@@ -520,7 +520,7 @@ export async function publishAllResultsAction(_prev?: unknown, _formData?: FormD
  * genuinely stops late hand-ins rather than merely hiding the form.
  */
 async function setConfig(patch: Record<string, unknown>) {
-  await requireAdmin();
+  await requireCoreTeam();
   const { error } = await createAdminClient()
     .from("hack_config")
     .upsert({ id: true, ...patch, updated_at: new Date().toISOString() }, { onConflict: "id" });
@@ -559,7 +559,7 @@ export async function toggleSubmissionsOpenAction(_prev: unknown, formData: Form
 }
 
 export async function deleteAnnouncementAction(_prev: unknown, formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Missing announcement." };
 

@@ -4,6 +4,7 @@ import { EventNav } from "@/components/events/shell/event-nav";
 import { getEvent, getEventSettings, resolveTheme, themeVars, can } from "@/lib/events/engine";
 import { readEventSession } from "@/lib/events/session";
 import { getEventActor } from "@/lib/events/auth";
+import { eventBasePath } from "@/lib/events/paths";
 
 /**
  * Per-event layout.
@@ -41,7 +42,7 @@ export default async function EventLayout({
 
   const settings = await getEventSettings(event.id);
   const theme = resolveTheme(event);
-  const base = `/events/hub/${event.slug}`;
+  const base = eventBasePath(event.slug);
   const participantId = await readEventSession(event.slug).catch(() => null);
   const actor = await getEventActor(event.id, event.slug);
   const isOrganiser = actor.isClubAdmin || actor.roles.some((r) => r === "admin" || r === "super_admin");

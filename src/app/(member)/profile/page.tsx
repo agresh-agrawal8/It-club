@@ -1,47 +1,61 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { KeyRound } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { roleLabel } from "@/lib/utils";
 import { ProfileForm } from "./profile-form";
-import { isAdminRole, roleLabel } from "@/lib/utils";
-import type { Profile } from "@/types/database";
 
-export const metadata: Metadata = { title: "My Profile" };
+export const metadata: Metadata = { title: "My profile" };
 
 export default async function ProfilePage() {
   const { profile } = await requireUser();
-  const p = (profile ?? {}) as Profile;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tighter text-white md:text-4xl">My Profile</h1>
-        <p className="mt-1 text-sm text-zinc-400">Update how you appear on the team page and projects.</p>
-      </div>
+    <div className="flex flex-col gap-10">
+      <header className="flex flex-col gap-2">
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-brand-300">Account</p>
+        <h1 className="headline text-[clamp(1.7rem,1.2rem+1.8vw,2.5rem)] text-white">
+          My profile
+        </h1>
+        <p className="text-sm text-ink-3">How you appear on the public team page.</p>
+      </header>
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        <Card glass className="flex h-fit flex-col items-center gap-4 text-center">
-          <Avatar name={p.full_name || "Member"} src={p.avatar_url} size="xl" />
-          <div>
-            <div className="flex items-center justify-center gap-2">
-              <h2 className="text-lg font-semibold text-white">{p.full_name || "Member"}</h2>
-              {isAdminRole(p.role) && <Badge variant="accent">{roleLabel(p.role)}</Badge>}
-            </div>
-            {p.member_id && <p className="text-xs text-zinc-500">{p.member_id}</p>}
-          </div>
-          {p.headline && <p className="text-sm text-zinc-400">{p.headline}</p>}
-          <div className="flex items-center gap-2 text-xs">
-            <span className={`h-2 w-2 rounded-full ${p.phone_verified ? "bg-emerald-400" : "bg-zinc-600"}`} />
-            <span className="text-zinc-500">
-              {p.phone_verified ? "Phone verified" : "Phone not verified"}
-            </span>
-          </div>
-        </Card>
+        <aside className="surface flex h-fit flex-col items-center gap-4 rounded-3xl p-7 text-center">
+          <Avatar name={profile.full_name || "Member"} src={profile.avatar_url} size="xl" />
 
-        <Card>
-          <ProfileForm profile={p} />
-        </Card>
+          <div className="flex flex-col items-center gap-2">
+            <h2 className="text-base font-semibold text-white">
+              {profile.full_name || "Member"}
+            </h2>
+            <Badge variant="accent">{roleLabel(profile.role)}</Badge>
+          </div>
+
+          {profile.headline && <p className="text-sm text-ink-3">{profile.headline}</p>}
+
+          {/*
+            Your name is your sign-in identifier, so it is not editable here —
+            changing it would move the credential the login form derives while
+            leaving the stored one behind. Ask the core team if it is wrong.
+          */}
+          <p className="mt-2 border-t border-white/10 pt-4 text-xs leading-relaxed text-ink-4">
+            Your name is how you sign in, so it can only be changed by the core team.
+          </p>
+
+          <Link
+            href="/account/password"
+            className="mt-1 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/15 px-4 py-3 text-xs font-medium text-white transition-colors hover:bg-white/5"
+          >
+            <KeyRound className="h-3.5 w-3.5" aria-hidden />
+            Change password
+          </Link>
+        </aside>
+
+        <div className="surface rounded-3xl p-6 md:p-8">
+          <ProfileForm profile={profile} />
+        </div>
       </div>
     </div>
   );

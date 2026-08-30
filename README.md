@@ -1,181 +1,170 @@
-# Emerald Heights IT Club — Management & Showcase Platform
+# Avinya
 
-A production-ready platform for the **Emerald Heights International School IT Club**: a public
-showcase (projects, events, competitions, team, gallery, achievements) plus a members' area
-(dashboard, projects, tasks, notifications, calendar) and an admin console.
+The website and management platform for **Avinya**, the student-run IT & AI Club of
+The Emerald Heights International School, Indore.
 
-Built with **Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Supabase**, and
-styled entirely with the **Agresh Agrawal Design System** (luxury dark theme, violet accents,
-glassmorphism).
+Public site, a Core Team management panel, and a Member area — one application, one
+design language, one database.
 
 ---
 
-## Tech stack
+## Stack
 
-| Layer      | Choice                                                             |
-| ---------- | ----------------------------------------------------------------- |
-| Framework  | Next.js 15 App Router (Server Components, Server Actions, Route Handlers) |
-| Language   | TypeScript (strict)                                               |
-| Styling    | Tailwind CSS v4 (`@theme` tokens) + Agresh design system          |
-| Backend    | Supabase — Auth, Postgres, Row Level Security, Storage            |
-| Icons      | lucide-react                                                       |
-| Validation | Zod                                                               |
+| Layer      | Choice                                                      |
+| ---------- | ----------------------------------------------------------- |
+| Framework  | Next.js 15 (App Router, React 19, Server Components)         |
+| Language   | TypeScript (strict)                                          |
+| Styling    | Tailwind CSS v4 with `@theme` design tokens                  |
+| Database   | Supabase Postgres, with Row Level Security on every table    |
+| Auth       | Supabase Auth (bcrypt password hashing, HTTP-only cookies)   |
+| Storage    | Supabase Storage (`gallery`, `media`, `avatars`, `events`, …)|
+| Fonts      | Inter (body), Orbitron (display), JetBrains Mono (labels)    |
+| Hosting    | Vercel                                                       |
 
 ---
 
-## Project structure
+## Roles
 
-```
-src/
-  app/
-    (public)/            # Public site (Navbar + Footer layout)
-      page.tsx           #   Home
-      projects/          #   Projects list + [slug] detail
-      events/            #   Events list + [slug] detail
-      competitions/ team/ gallery/ achievements/ contact/ search/
-    (member)/            # Auth-gated area (sidebar layout)
-      dashboard/ profile/ my-projects/ my-tasks/ notifications/ calendar/
-      admin/             #   Admin console + members management
-    login/               # Member login
-    auth/signout/        # Sign-out route handler
-    api/search/          # Global search endpoint
-  components/
-    ui/                  # Design-system primitives (Button, Card, Badge, …)
-    features/            # Domain components (ProjectCard, EventCard, forms, …)
-    layout/              # Navbar, Footer, MemberSidebar, PageHeader
-  lib/
-    supabase/            # Browser / server / admin clients + middleware
-    actions/             # Server Actions (auth, admin, projects, member, public)
-    data.ts              # Typed server-side data access (RLS-aware)
-    auth.ts utils.ts member-id.ts
-  types/database.ts      # DB types (mirror of the SQL schema)
-  middleware.ts          # Session refresh + route protection
-supabase/
-  migrations/            # 0001_init · 0002_policies · 0003_storage
-  seed.sql               # Homepage/settings seed
-```
+The club has exactly **two** roles. There is no admin tier above core team.
+
+| Role        | Home         | Can do                                                     |
+| ----------- | ------------ | ---------------------------------------------------------- |
+| `core_team` | `/admin`     | Manage members, events, competitions, achievements, gallery, submissions, and broadcast notices |
+| `member`    | `/dashboard` | See their tasks, the calendar, notices, and edit their own profile |
+
+Authorization is enforced in three places, in this order:
+
+1. **Middleware** — checks a session exists before any protected route renders.
+2. **Page guards** — `requireUser()` / `requireCoreTeam()` re-read the role from the
+   database on every request. The role is never read from a cookie or a client prop.
+3. **Row Level Security** — `is_admin()` in Postgres is the final word. A guard that
+   was somehow skipped still cannot read or write rows the account is not entitled to.
+
+---
+
+## Identity and passwords
+
+A member is a **name**, a **password** and a **role**. There is no email address, no
+member ID, and no external identifier in the user model.
+
+Supabase Auth requires an `email` column, so each account carries a synthetic internal
+address derived from the name (`authEmailForName()` in `src/lib/identity.ts`, mirrored
+by `public.auth_email_for_name()` in the database). It is never collected, displayed,
+or returned by an API.
+
+**Passwords are stored only as bcrypt hashes.** There is no plaintext column, no
+password list, and no interface anywhere that can read an existing password — including
+for the core team. Helping someone who has forgotten theirs means issuing a *new*
+temporary credential:
+
+- `admin_create_member()` — provisions an account with a generated one-time password,
+  returned to the creating admin exactly once, and flags `must_change_password`.
+- `admin_reset_member_password()` — issues a new temporary password and re-flags the
+  account. The old one is not recoverable, by design.
+- A flagged account is redirected to `/account/password` and nothing else in the member
+  area opens until the password is replaced.
+
+Changing your own password re-verifies the current one first, so an unattended signed-in
+browser cannot be used to take the account over.
 
 ---
 
 ## Getting started
 
-### 1. Install
-
 ```bash
 npm install
 ```
 
-### 2. Configure environment
-
-Copy `.env.example` → `.env.local` and fill in your Supabase project values:
+Create `.env.local`:
 
 ```bash
-cp .env.example .env.local
+NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable key>
+SUPABASE_SERVICE_ROLE_KEY=<secret key>          # server only, never exposed
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+EVENT_SESSION_SECRET=<random string>            # signs event-hub session cookies
+
+# Optional — web push degrades gracefully without these.
+# Generate with: npx web-push generate-vapid-keys
+# NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+# VAPID_PRIVATE_KEY=
+# VAPID_SUBJECT=mailto:you@example.com
 ```
 
-| Variable | Where to find it |
-| --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | same page (anon / publishable key) |
-| `SUPABASE_SERVICE_ROLE_KEY` | same page — **server-only**, used to create member accounts |
-| `NEXT_PUBLIC_SITE_URL` | e.g. `http://localhost:3000` |
-
-### 3. Apply the database schema
-
-Using the **Supabase CLI** (recommended):
-
 ```bash
-supabase link --project-ref YOUR-PROJECT-REF
-supabase db push          # applies supabase/migrations/*
-psql "$DATABASE_URL" -f supabase/seed.sql   # optional seed
-```
-
-…or paste the contents of `supabase/migrations/0001_init.sql`, `0002_policies.sql`,
-`0003_storage.sql` (in order) into the Supabase **SQL Editor**, then `seed.sql`.
-
-### 4. Run
-
-```bash
-npm run dev      # http://localhost:3000
-```
-
-The app is **resilient without a database** — every page renders its empty state until Supabase is
-connected, so you can develop the UI first.
-
----
-
-## Creating the first admin
-
-Member accounts are created only by the core team, so bootstrap the first admin manually:
-
-1. In Supabase → **Authentication → Users → Add user**, create a user with:
-   - Email: `<memberid>@members.emeraldheights.local` (e.g. `ehisit0001@members.emeraldheights.local`)
-   - A password, and **Auto Confirm** enabled.
-2. In **SQL Editor**, promote them and set a Member ID:
-   ```sql
-   update public.profiles
-   set role = 'admin', member_id = 'EHIS-IT-0001', full_name = 'Core Admin'
-   where id = (select id from auth.users
-               where email = 'ehisit0001@members.emeraldheights.local');
-   ```
-3. Sign in at `/login` with Member ID `EHIS-IT-0001` and the password.
-
-Thereafter, admins create all other members from **Admin → Members** (no SQL needed). Members log
-in with the **Member ID + password** — the app maps the Member ID to the synthetic auth email
-internally (`src/lib/member-id.ts`).
-
----
-
-## Roles & access (enforced by RLS)
-
-- **Visitor** — reads all public content; can subscribe & contact. No login.
-- **Member** — manages own profile & projects (no approval needed), sees own tasks/notifications.
-- **Admin / Core team** — full control of members, events, competitions, gallery, achievements,
-  tasks, notifications and settings.
-
-Security is enforced in Postgres (`0002_policies.sql`), so the client can only ever read/write what
-the signed-in role is allowed to — the UI mirrors those rules.
-
----
-
-## Storage buckets
-
-`avatars`, `projects`, `events`, `gallery`, `tasks` — all public-read, write-gated by role
-(`0003_storage.sql`). Members upload to their own avatar folder and to project media; the
-`events` / `gallery` / `tasks` buckets are admin-only.
-
----
-
-## Notifications
-
-Website notifications are stored in `public.notifications`. Email and WhatsApp fan-out is designed
-to be handled by a Supabase Edge Function that reads new rows and calls the providers configured via
-`RESEND_API_KEY` / `WHATSAPP_*` env vars. Members must verify their phone (`profiles.phone_verified`)
-before receiving WhatsApp updates.
-
----
-
-## Deploy to Vercel
-
-1. Push the repo to GitHub and import it into Vercel.
-2. Add the same environment variables (`.env.example`) in the Vercel project settings.
-3. Deploy. `next.config.ts` already allows Supabase Storage image domains.
-
----
-
-## Scripts
-
-```bash
-npm run dev        # development server
+npm run dev        # http://localhost:3000
 npm run build      # production build
-npm run start      # run production build
 npm run typecheck  # tsc --noEmit
+npm run lint       # eslint
 ```
 
 ---
 
-## Design system
+## Database
 
-All UI decisions follow the **Agresh Agrawal Design System** (in `/agresh-design-system`). Its
-tokens are ported into `src/app/globals.css` (`@theme`) and its components into `src/components/ui`.
-Do not introduce a competing design language — extend these primitives instead.
+Migrations live in `supabase/migrations/`, applied in filename order.
+
+```
+0001–0003   core schema, RLS policies, storage buckets
+0010–0022   hackathon and event-hub modules
+0023        two-role cleanup, identity simplification, module removal
+0024        column privileges on profiles
+```
+
+`0023` is the significant one. It removes the projects, applications and messages
+modules outright, collapses five roles to two, drops `profiles.member_id`, adds the
+derived-SEO columns to `gallery_items`, and replaces the account-provisioning functions.
+
+---
+
+## Gallery
+
+The upload form has two fields: **an image and a title.**
+
+Everything else is derived server-side in `src/lib/actions/gallery.ts`:
+
+- The file's real format is identified from its **bytes** (`src/lib/images.ts`), never
+  from the filename or the browser-supplied MIME type.
+- Intrinsic width and height are parsed from the image header, so every `<img>` renders
+  with `width`/`height` and the grid reserves its space before the bytes arrive.
+- The storage filename and URL slug are generated from the title.
+- Alt text is taken from the title, used verbatim rather than padded with keywords.
+- The public gallery emits `ImageGallery` structured data and responsive `srcset`.
+
+---
+
+## SEO
+
+- Per-page titles, descriptions and canonical URLs; a single `<h1>` per page.
+- Open Graph and Twitter cards, with a generated 1200×630 card at `/og-image.png`.
+- `Organization` structured data on the homepage, `ImageGallery` on the gallery.
+- `/sitemap.xml` (public routes plus every published event) and `/robots.txt`, which
+  disallows the signed-in areas.
+- Semantic HTML, a skip link, and a focus ring on every interactive element.
+
+---
+
+## Project layout
+
+```
+src/
+  app/
+    (public)/        public site — home, events, gallery, team, contact, …
+    (member)/        signed-in shell — /dashboard, /profile, and /admin/* (Core Team)
+    (hackathon)/     Infinium hackathon module
+    (events)/        event-hub engine; Code Red is served at /codered
+    account/         change password
+    login/           sign in
+  components/
+    ui/              design-system primitives (Field, MeshCard, Card, …)
+    layout/          navbar, footer, app navigation, logo
+    admin/           core-team forms
+    features/        gallery grid, member card, search
+  lib/
+    auth.ts          server-side guards
+    identity.ts      name → internal auth address
+    images.ts        upload byte-sniffing and dimension parsing
+    actions/         server actions
+    data.ts          server-side queries
+supabase/migrations/ schema history
+```

@@ -5,9 +5,17 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 
+/**
+ * Note what a member may NOT edit: their own name.
+ *
+ * The name is the sign-in identifier, and the account's synthetic auth address
+ * is derived from it when the account is created. Letting a member rename
+ * themselves here would change the name the login form hashes into an address
+ * while leaving `auth.users.email` on the old one — locking them out of their
+ * own account. Renaming is a core-team operation that has to move both.
+ */
 const profileSchema = z.object({
-  full_name: z.string().min(2),
-  headline: z.string().optional(),
+  headline: z.string().max(120).optional(),
   bio: z.string().optional(),
   grade: z.string().optional(),
   github_url: z.string().url().optional().or(z.literal("")),
@@ -20,7 +28,6 @@ export async function updateProfileAction(_prev: unknown, formData: FormData) {
   const { user } = await requireUser();
 
   const parsed = profileSchema.safeParse({
-    full_name: formData.get("full_name"),
     headline: formData.get("headline") ?? "",
     bio: formData.get("bio") ?? "",
     grade: formData.get("grade") ?? "",
@@ -49,18 +56,33 @@ export async function updateProfileAction(_prev: unknown, formData: FormData) {
   return { success: "Profile updated." };
 }
 
-/** Members update the progress/status of tasks assigned to them. */
+const taskUpdateSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["todo", "in_progress", "blocked", "done"]),
+  progress: z.coerce.number().int().min(0).max(100),
+});
+
+/**
+ * Members update the progress of tasks assigned to them.
+ *
+ * The `.eq("assignee_id", user.id)` is the authorization: without it, posting
+ * someone else's task id would let any member edit any task in the club.
+ */
 export async function updateTaskProgressAction(formData: FormData) {
   const { user } = await requireUser();
-  const id = formData.get("id") as string;
-  const status = formData.get("status") as string;
-  const progress = Number(formData.get("progress") ?? 0);
+
+  const parsed = taskUpdateSchema.safeParse({
+    id: formData.get("id"),
+    status: formData.get("status"),
+    progress: formData.get("progress") ?? 0,
+  });
+  if (!parsed.success) return;
 
   const supabase = await createClient();
   await supabase
     .from("tasks")
-    .update({ status, progress: Math.max(0, Math.min(100, progress)) })
-    .eq("id", id)
+    .update({ status: parsed.data.status, progress: parsed.data.progress })
+    .eq("id", parsed.data.id)
     .eq("assignee_id", user.id);
 
   revalidatePath("/my-tasks");

@@ -5,7 +5,7 @@ import { GlobalSearch } from "@/components/features/global-search";
 
 export const metadata: Metadata = {
   title: "Search",
-  description: "Search across projects, members, events, competitions and achievements.",
+  description: "Search across events, members, photographs and achievements.",
 };
 
 export default function SearchPage() {

@@ -61,7 +61,7 @@ export function hasServiceRole() {
 
 /**
  * Service-role client — bypasses RLS. ONLY use in trusted server code, and
- * only *after* the caller has been authorised (requireAdmin, or a verified
+ * only *after* the caller has been authorised (requireCoreTeam, or a verified
  * session). Never expose to the client.
  *
  * Throws when the key is absent: a client built on `undefined` silently sends

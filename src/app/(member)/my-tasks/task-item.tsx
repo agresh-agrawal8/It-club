@@ -28,7 +28,7 @@ export function TaskItem({ task }: { task: TaskRow }) {
   const overdue = task.deadline && new Date(task.deadline) < new Date() && status !== "done";
 
   return (
-    <Card className="flex flex-col gap-4">
+    <Card surface className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h3 className="text-base font-semibold text-white">{task.title}</h3>

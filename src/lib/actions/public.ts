@@ -3,9 +3,17 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * Public (unauthenticated) actions.
+ *
+ * The contact-message and membership-application forms that used to live here
+ * are gone along with their tables — the club takes both in person now, and
+ * the contact page carries the details instead of an inbox nobody read.
+ */
+
 const subscribeSchema = z.object({
   channel: z.enum(["email", "whatsapp"]),
-  contact: z.string().min(3),
+  contact: z.string().trim().min(3).max(120),
 });
 
 export async function subscribeAction(_prev: unknown, formData: FormData) {
@@ -15,10 +23,12 @@ export async function subscribeAction(_prev: unknown, formData: FormData) {
   });
   if (!parsed.success) return { error: "Enter a valid email or phone number." };
 
-  // Basic per-channel validation
   const { channel, contact } = parsed.data;
   if (channel === "email" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact)) {
     return { error: "Enter a valid email address." };
+  }
+  if (channel === "whatsapp" && !/^[+\d][\d\s-]{6,}$/.test(contact)) {
+    return { error: "Enter a valid phone number." };
   }
 
   try {
@@ -27,54 +37,26 @@ export async function subscribeAction(_prev: unknown, formData: FormData) {
       .from("subscribers")
       .upsert({ channel, contact }, { onConflict: "channel,contact" });
     if (error) return { error: "Could not subscribe right now. Please try again." };
-    return { success: "You're subscribed! We'll keep you posted." };
+    return { success: "You're subscribed. We'll let you know what's coming up." };
   } catch {
-    return { error: "Subscription service is not available yet." };
-  }
-}
-
-const contactSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  subject: z.string().optional(),
-  message: z.string().min(10),
-});
-
-export async function contactAction(_prev: unknown, formData: FormData) {
-  const parsed = contactSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    subject: formData.get("subject"),
-    message: formData.get("message"),
-  });
-  if (!parsed.success) {
-    return { error: "Please complete all fields (message ≥ 10 characters)." };
-  }
-
-  try {
-    const supabase = await createClient();
-    const { error } = await supabase.from("contact_messages").insert(parsed.data);
-    if (error) return { error: "Could not send your message. Please try again." };
-    return { success: "Thanks for reaching out — we'll get back to you soon!" };
-  } catch {
-    return { error: "Messaging is not available yet." };
+    return { error: "Subscriptions aren't available right now." };
   }
 }
 
 const submissionSchema = z.object({
-  name: z.string().min(2, "Please enter your name"),
-  email: z.string().email("Enter a valid email"),
+  name: z.string().trim().min(2, "Please enter your name").max(80),
+  email: z.string().trim().email("Enter a valid email"),
   category: z.enum(["competition", "company", "content", "other"]).default("competition"),
-  title: z.string().min(3, "Give your submission a title"),
-  message: z.string().optional(),
+  title: z.string().trim().min(3, "Give your submission a title").max(140),
+  message: z.string().max(4000).optional(),
   file_url: z.string().url().optional().or(z.literal("")),
   link_url: z.string().url("Enter a valid link").optional().or(z.literal("")),
 });
 
 /**
- * Public: submit a document/entry for competitions, company drives or club
- * content. The file (if any) is uploaded to the `submissions` bucket by the
- * client first; this action only records the row.
+ * Public: submit an entry for a competition, company drive or club content.
+ * Any file is uploaded to the `submissions` bucket by the client first; this
+ * action records the row.
  */
 export async function submitDocumentAction(_prev: unknown, formData: FormData) {
   const parsed = submissionSchema.safeParse({
@@ -89,9 +71,19 @@ export async function submitDocumentAction(_prev: unknown, formData: FormData) {
   if (!parsed.success) {
     return { error: parsed.error.errors[0]?.message ?? "Please complete the form." };
   }
+
   const d = parsed.data;
   if (!d.file_url && !d.link_url) {
     return { error: "Attach a file or paste a link to your work." };
+  }
+
+  // Only accept links the browser will actually treat as web links — a
+  // javascript: or data: URL stored here would be rendered in the core-team
+  // inbox as a clickable anchor.
+  for (const url of [d.file_url, d.link_url]) {
+    if (url && !/^https?:\/\//i.test(url)) {
+      return { error: "Links must start with http:// or https://" };
+    }
   }
 
   try {
@@ -108,48 +100,6 @@ export async function submitDocumentAction(_prev: unknown, formData: FormData) {
     if (error) return { error: "Could not submit right now. Please try again." };
     return { success: "Submission received — the core team will review it soon." };
   } catch {
-    return { error: "Submissions are not available yet." };
-  }
-}
-
-const joinSchema = z.object({
-  name: z.string().min(2, "Please enter your name"),
-  email: z.string().email("Enter a valid email"),
-  grade: z.string().min(1, "Select your class"),
-  phone: z.string().optional(),
-  experience: z.string().optional(),
-  why: z.string().min(10, "Tell us a little more (at least 10 characters)"),
-});
-
-/** Public: membership application from the /join page. */
-export async function joinRequestAction(_prev: unknown, formData: FormData) {
-  const parsed = joinSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    grade: formData.get("grade"),
-    phone: formData.get("phone"),
-    experience: formData.get("experience"),
-    why: formData.get("why"),
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.errors[0]?.message ?? "Please complete the form." };
-  }
-  const interests = formData.getAll("interests").map(String).filter(Boolean);
-
-  try {
-    const supabase = await createClient();
-    const { error } = await supabase.from("join_requests").insert({
-      ...parsed.data,
-      phone: parsed.data.phone || null,
-      experience: parsed.data.experience || null,
-      interests,
-    });
-    if (error) return { error: "Could not send your application. Please try again." };
-    return {
-      success:
-        "Application received! The core team will review it and reach out on your email with your Member ID.",
-    };
-  } catch {
-    return { error: "Applications are not available right now." };
+    return { error: "Submissions aren't available right now." };
   }
 }

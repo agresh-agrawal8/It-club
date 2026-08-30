@@ -2,9 +2,10 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { createAdminClient, createClient, hasServiceRole } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
-import { isAdminRole } from "@/lib/utils";
+import { isCoreTeam } from "@/lib/utils";
 import { readEventSession } from "./session";
 import type { EventRole } from "./types";
+import { eventBasePath } from "@/lib/events/paths";
 
 /**
  * Event-domain authorisation.
@@ -43,7 +44,7 @@ export async function getEventActor(eventId: string, eventSlug: string): Promise
     const current = await getCurrentUser();
     if (current?.user) {
       userId = current.user.id;
-      if (isAdminRole(current.profile?.role)) {
+      if (isCoreTeam(current.profile?.role)) {
         isClubAdmin = true;
         roles.add("admin");
       }
@@ -97,20 +98,20 @@ function has(actor: EventActor, allowed: EventRole[]) {
 /** Require any signed-in participant; redirect to the event login otherwise. */
 export async function requireEventParticipant(eventId: string, eventSlug: string) {
   const actor = await getEventActor(eventId, eventSlug);
-  if (!actor.participantId && !actor.isClubAdmin) redirect(`/events/hub/${eventSlug}/login`);
+  if (!actor.participantId && !actor.isClubAdmin) redirect(`${eventBasePath(eventSlug)}/login`);
   return actor;
 }
 
 /** Require event staff (volunteer/judge/admin) — else back to the landing page. */
 export async function requireEventStaff(eventId: string, eventSlug: string) {
   const actor = await getEventActor(eventId, eventSlug);
-  if (!has(actor, STAFF_ROLES)) redirect(`/events/hub/${eventSlug}`);
+  if (!has(actor, STAFF_ROLES)) redirect(eventBasePath(eventSlug));
   return actor;
 }
 
 /** Require an event organiser (admin/super_admin, or a club admin). */
 export async function requireEventAdmin(eventId: string, eventSlug: string) {
   const actor = await getEventActor(eventId, eventSlug);
-  if (!has(actor, ADMIN_ROLES)) redirect(`/events/hub/${eventSlug}`);
+  if (!has(actor, ADMIN_ROLES)) redirect(eventBasePath(eventSlug));
   return actor;
 }

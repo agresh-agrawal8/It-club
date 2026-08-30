@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Award } from "lucide-react";
-import { requireAdmin } from "@/lib/auth";
+import { requireCoreTeam } from "@/lib/auth";
 import { getAchievements } from "@/lib/data";
 import { Card } from "@/components/ui/card";
 import { AdminPageHeader, DeleteButton } from "@/components/admin/admin-shell";
@@ -11,7 +11,7 @@ import { formatDate } from "@/lib/utils";
 export const metadata: Metadata = { title: "Manage Achievements" };
 
 export default async function AdminAchievementsPage() {
-  await requireAdmin();
+  await requireCoreTeam();
   const achievements = await getAchievements();
 
   return (
@@ -22,8 +22,8 @@ export default async function AdminAchievementsPage() {
         backHref="/admin"
       />
 
-      <Card deep className="p-6 md:p-8">
-        <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+      <Card surface deep className="p-6 md:p-8">
+        <h2 className="headline-wide mb-5 text-sm text-white">
           New achievement
         </h2>
         <AdminCreateForm
@@ -41,21 +41,21 @@ export default async function AdminAchievementsPage() {
       </Card>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+        <h2 className="headline-wide text-sm text-white">
           All achievements ({achievements.length})
         </h2>
         {achievements.length === 0 && (
-          <p className="text-sm text-zinc-500">Nothing yet — add the first achievement above.</p>
+          <p className="text-sm text-ink-4">Nothing yet — add the first achievement above.</p>
         )}
         {achievements.map((a) => (
-          <Card key={a.id} className="flex items-center justify-between gap-4 p-5">
+          <Card surface key={a.id} className="flex items-center justify-between gap-4 p-5">
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-300">
                 <Award className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <span className="truncate text-sm font-semibold text-white">{a.title}</span>
-                <p className="mt-0.5 text-xs text-zinc-500">
+                <p className="mt-0.5 text-xs text-ink-4">
                   {a.category ?? "—"}
                   {a.awarded_on ? ` · ${formatDate(a.awarded_on)}` : ""}
                 </p>

@@ -9,6 +9,7 @@ import { listEvents, resolveTheme } from "@/lib/events/engine";
 import { EventMark } from "@/components/events/shell/event-mark";
 import { eventPhase } from "@/lib/events/rules";
 import { formatDate } from "@/lib/utils";
+import { eventBasePath } from "@/lib/events/paths";
 
 export const metadata: Metadata = {
   title: "Event Hub",
@@ -61,7 +62,7 @@ export default async function EventHubPage() {
             const phase = eventPhase(event);
 
             return (
-              <Link key={event.id} href={`/events/hub/${event.slug}`} className="group">
+              <Link key={event.id} href={eventBasePath(event.slug)} className="group">
                 <Card
                   hoverLift
                   className="relative flex h-full flex-col gap-4 overflow-hidden p-6"

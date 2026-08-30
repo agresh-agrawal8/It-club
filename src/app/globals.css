@@ -2,25 +2,59 @@
 
 /*
  * ============================================================================
- * Agresh Agrawal Design System — single source of truth
- * Luxury dark theme · violet accents · glassmorphism · smooth motion.
- * Ported from agresh-design-system (agreshagrawal.com brand guidelines).
+ * Avinya — design tokens
+ *
+ * One dark system for the whole product: the public site, the Core Team panel
+ * and the Member area all draw from this file, so nothing reads as a different
+ * application. Near-black base, violet ambient light, electric-blue highlights,
+ * thin luminous borders, geometric display type.
+ *
+ * Every value below is a token. Components reference tokens, never raw hex —
+ * that is what keeps contrast guarantees and motion timing from drifting.
  * ============================================================================
  */
 
 @theme {
-  /* Brand accent (violet) — mirrors design-system component usage */
-  --color-brand-50: #f5f3ff;
-  --color-brand-100: #ede9fe;
-  --color-brand-200: #ddd6fe;
-  --color-brand-300: #c4b5fd;
-  --color-brand-400: #a78bfa;
-  --color-brand-500: #8b5cf6;
-  --color-brand-600: #7c3aed;
-  --color-brand-700: #6d28d9;
+  /* ── Brand: deep indigo ──────────────────────────────────────────────
+     Retuned away from the stock #8b5cf6 violet, which is a high-saturation
+     magenta-purple. At the scale this UI uses it — large ambient washes
+     behind everything — that hue reads garish rather than expensive.
 
-  /* Secondary accent (spring green) — pairs with violet for data & highlights.
-     Used sparingly so violet stays the primary brand colour. */
+     This ramp is pulled toward indigo and desaturated: it holds its colour
+     against near-black without shouting, and it sits properly beside the
+     champagne in the club's own emblem instead of fighting it. */
+  --color-brand-50: #f2f3fb;
+  --color-brand-100: #e4e6f7;
+  --color-brand-200: #c9cdf0;
+  --color-brand-300: #a5ace4;
+  --color-brand-400: #7e88d4;
+  --color-brand-500: #5e6ad2;
+  --color-brand-600: #4750ab;
+  --color-brand-700: #373f87;
+
+  /* ── Champagne ───────────────────────────────────────────────────────
+     Taken straight from the metallic type on the club emblem. A warm
+     neutral is what makes a dark interface read as considered rather than
+     cheap — it is used sparingly, on small-caps labels and hairlines, never
+     as a fill. */
+  --color-champagne-200: #efe7d8;
+  --color-champagne-300: #dccdb2;
+  --color-champagne-400: #c4b190;
+
+  /* ── Electric blue ───────────────────────────────────────────────────
+     The second half of the palette. Violet carries atmosphere and glow;
+     electric blue carries precision — hairline borders, active states,
+     data, and the cool edge on a gradient. Keeping them in separate roles
+     is what stops the UI turning into an undifferentiated purple wash. */
+  --color-electric-200: #bae6fd;
+  --color-electric-300: #7dd3fc;
+  --color-electric-400: #38bdf8;
+  --color-electric-500: #0ea5e9;
+  --color-electric-600: #0284c7;
+
+  /* Secondary accent (spring green) — reserved for the hackathon module,
+     which themes itself green to read as its own event. Not used on the
+     club site, so violet/blue stays the club's identity. */
   --color-accent-300: #86efac;
   --color-accent-400: #4ade80;
   --color-accent-500: #22c55e;
@@ -99,7 +133,16 @@
   --radius-2xl: 1.25rem;
   --radius-3xl: 1.75rem;
 
-  /* Fonts */
+  /* ── Fonts ───────────────────────────────────────────────────────────
+     The design reference sets its headlines in Bicubik, which is a
+     commercial face and cannot be bundled here. Orbitron is the closest
+     legally usable match: the same wide, geometric, monoline construction
+     with squared bowls, and it ships under the SIL Open Font License, so
+     it can be self-hosted and redistributed with the project.
+
+     It is a display face only. Orbitron at paragraph size is unreadable,
+     so body copy stays on Inter and the two never swap roles. */
+  --font-display: var(--font-orbitron), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", "JetBrains Mono", monospace;
 
@@ -169,12 +212,12 @@
     background-image:
       radial-gradient(
         900px 480px at 70% -10%,
-        color-mix(in oklab, var(--color-brand-600) 10%, transparent),
+        color-mix(in oklab, var(--color-brand-600) 6%, transparent),
         transparent 70%
       ),
       radial-gradient(
         700px 420px at 10% 0%,
-        color-mix(in oklab, var(--color-brand-500) 6%, transparent),
+        color-mix(in oklab, var(--color-brand-500) 4%, transparent),
         transparent 70%
       );
     background-repeat: no-repeat;
@@ -361,9 +404,9 @@
   /* Ambient radial glow used behind hero / headings */
   .glow-violet {
     background: radial-gradient(
-      600px circle at 50% 0%,
-      color-mix(in oklab, var(--color-brand-500) 22%, transparent),
-      transparent 70%
+      640px circle at 50% 0%,
+      color-mix(in oklab, var(--color-brand-500) 12%, transparent),
+      transparent 72%
     );
   }
 
@@ -536,6 +579,310 @@
   .ev-cta:hover {
     background-color: var(--ev-accent);
     filter: brightness(1.1);
+  }
+
+  /* ── Display typography ─────────────────────────────────────────────
+     Orbitron is wide and geometric, so it needs the opposite treatment to
+     Inter: negative tracking closes it up at display sizes, and uppercase
+     is where its squared forms actually resolve. Anything set in .headline
+     is a headline — never a paragraph. */
+  .headline {
+    font-family: var(--font-display);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    line-height: 0.95;
+  }
+  /* Wide-tracked variant for short labels and single words. */
+  .headline-wide {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── Thin luminous border ───────────────────────────────────────────
+     A 1px gradient edge that runs violet → electric blue. Painted with a
+     masked pseudo-element rather than border-image, because border-image
+     does not follow border-radius. */
+  .hairline-gradient {
+    position: relative;
+  }
+  .hairline-gradient::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-brand-400) 70%, transparent) 0%,
+      color-mix(in oklab, white 14%, transparent) 42%,
+      color-mix(in oklab, var(--color-electric-400) 65%, transparent) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Electric ambient glow — the cool counterpart to .glow-violet. */
+  .glow-electric {
+    background: radial-gradient(
+      600px circle at 50% 0%,
+      color-mix(in oklab, var(--color-electric-500) 18%, transparent),
+      transparent 70%
+    );
+  }
+
+  /* The club's signature atmosphere: violet mass with a blue rim. */
+  .glow-club {
+    background:
+      radial-gradient(
+        680px circle at 18% 6%,
+        color-mix(in oklab, var(--color-brand-500) 13%, transparent),
+        transparent 68%
+      ),
+      radial-gradient(
+        600px circle at 86% 0%,
+        color-mix(in oklab, var(--color-electric-500) 8%, transparent),
+        transparent 66%
+      );
+  }
+
+  /* Violet → electric-blue text gradient, for one word in a headline. */
+  .text-club-gradient {
+    background: linear-gradient(
+      104deg,
+      var(--color-champagne-300) 0%,
+      #ffffff 42%,
+      var(--color-brand-300) 78%,
+      var(--color-electric-300) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ── Mesh card ──────────────────────────────────────────────────────
+     A near-black panel with a single saturated colour bleeding in from one
+     corner, over a faint graph-paper grid that fades out as it leaves that
+     corner. The grid is what stops the gradient reading as a smudge: it
+     gives the light something to fall across.
+
+     Colour comes from --card-accent so one class serves every card, and the
+     corner is set with --card-origin. Both are set inline per card. */
+  .mesh-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: #08080a;
+    border: 1px solid color-mix(in oklab, white 8%, transparent);
+  }
+  .mesh-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      125% 105% at var(--card-origin, 100% 0%),
+      var(--card-accent, var(--color-brand-500)) 0%,
+      transparent 58%
+    );
+    opacity: 0.42;
+    transition: opacity var(--duration-base) var(--ease-out-quart);
+  }
+  .mesh-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, white 7%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, white 7%, transparent) 1px, transparent 1px);
+    background-size: 44px 44px;
+    /* Grid only exists where the light is. */
+    -webkit-mask-image: radial-gradient(115% 95% at var(--card-origin, 100% 0%), black 0%, transparent 72%);
+    mask-image: radial-gradient(115% 95% at var(--card-origin, 100% 0%), black 0%, transparent 72%);
+  }
+  /* Content sits above both layers. */
+  .mesh-card > * {
+    position: relative;
+    z-index: 1;
+  }
+  .mesh-card:hover::before {
+    opacity: 0.58;
+  }
+  @media (hover: none) {
+    .mesh-card:hover::before { opacity: 0.42; }
+  }
+
+  /* Divider that matches the card's own grid lines. */
+  .mesh-rule {
+    border-top: 1px solid color-mix(in oklab, white 8%, transparent);
+  }
+
+  /* ── Surface ────────────────────────────────────────────────────────
+     The panel every card in the signed-in app sits on.
+
+     `.glass` was doing this job, and its grey translucent gradient read as
+     muddy once there was a lot of it on screen — frosted glass needs
+     something behind it to refract, and a dashboard is mostly flat dark.
+     This is opaque instead: a near-black plate lifted by a soft violet bloom
+     in one corner and a hairline of light along the top edge. It reads as
+     one solid, deliberately lit object rather than a grey film. */
+  .surface {
+    position: relative;
+    isolation: isolate;
+    border-radius: var(--radius-3xl);
+    background:
+      radial-gradient(
+        88% 120% at 100% 0%,
+        color-mix(in oklab, var(--color-brand-500) 9%, transparent) 0%,
+        transparent 64%
+      ),
+      linear-gradient(168deg, #131318 0%, #0c0c10 52%, #08080b 100%);
+    border: 1px solid color-mix(in oklab, white 7%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 color-mix(in oklab, white 9%, transparent),
+      0 1px 2px -1px rgb(0 0 0 / 0.6),
+      0 18px 44px -24px rgb(0 0 0 / 0.85);
+  }
+
+  /* Interactive variant — lifts, brightens its bloom, and picks up an
+     electric rim. Transform and opacity only, so it stays on the compositor. */
+  .surface-hover {
+    transition:
+      transform var(--duration-base) var(--ease-out-quart),
+      border-color var(--duration-base) ease,
+      box-shadow var(--duration-base) ease;
+    will-change: transform;
+  }
+  .surface-hover:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--color-electric-400) 28%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 color-mix(in oklab, white 13%, transparent),
+      0 22px 52px -24px rgb(0 0 0 / 0.9),
+      0 0 34px -20px color-mix(in oklab, var(--color-brand-500) 55%, transparent);
+  }
+  @media (hover: none) {
+    .surface-hover:hover { transform: none; }
+  }
+
+  /* A quieter inset row for lists inside a .surface — one step down, so a
+     list of items does not fight the panel holding it. */
+  .surface-row {
+    border-radius: var(--radius-xl);
+    background: color-mix(in oklab, white 2.5%, transparent);
+    border: 1px solid color-mix(in oklab, white 6%, transparent);
+    transition: background-color var(--duration-fast) ease;
+  }
+  .surface-row:hover {
+    background: color-mix(in oklab, white 4.5%, transparent);
+  }
+
+  /* ── Framed panel ───────────────────────────────────────────────────
+     The bordered stage the hero sits on: a dark rounded plate with a thin
+     luminous edge running violet → cyan, floating over ambient glow. */
+  .frame-panel {
+    position: relative;
+    border-radius: 2rem;
+    background:
+      linear-gradient(
+        168deg,
+        color-mix(in oklab, var(--color-surface-1) 92%, transparent) 0%,
+        #08080a 60%
+      );
+    box-shadow:
+      inset 0 1px 0 0 color-mix(in oklab, white 8%, transparent),
+      0 40px 120px -40px rgb(0 0 0 / 0.9);
+  }
+  .frame-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      150deg,
+      color-mix(in oklab, var(--color-brand-400) 85%, transparent) 0%,
+      color-mix(in oklab, white 10%, transparent) 38%,
+      color-mix(in oklab, white 6%, transparent) 62%,
+      color-mix(in oklab, var(--color-electric-400) 80%, transparent) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  /* ── Hero bottom blend ──────────────────────────────────────────────
+     The photograph is masked to transparent at its lower edge, so it
+     genuinely dissolves into the page background.
+
+     Doing this with an overlay gradient instead — a dark div stacked on top
+     — is what produced the visible seam: the overlay could only ever reach
+     the background colour it was told about, and any rounding between that
+     colour and the page beneath it shows up as a hard 1px line. Masking
+     removes the pixels instead of painting over them, so there is nothing
+     left to form an edge.
+
+     Two stops rather than one keeps the falloff from banding across a large
+     dark area. */
+  .hero-blend {
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 42%,
+      rgb(0 0 0 / 0.75) 66%,
+      rgb(0 0 0 / 0.28) 86%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 42%,
+      rgb(0 0 0 / 0.75) 66%,
+      rgb(0 0 0 / 0.28) 86%,
+      transparent 100%
+    );
+  }
+
+  /* ── Hero scroll blend ──────────────────────────────────────────────
+     The artwork dissolves and drifts as the hero leaves the viewport, so the
+     photograph hands over to the page instead of scrolling away as a slab.
+
+     `animation-timeline: view()` drives this from scroll position on the
+     compositor — no scroll listener, nothing on the main thread. Where it is
+     unsupported the hero is simply static, which is a fine outcome. */
+  @keyframes hero-dissolve {
+    to {
+      opacity: 0.18;
+      transform: scale(1.08) translateY(3%);
+    }
+  }
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .hero-media {
+        animation: hero-dissolve linear both;
+        animation-timeline: view();
+        animation-range: exit 0% exit 95%;
+        will-change: opacity, transform;
+      }
+    }
   }
 
   /* Oversized footer wordmark */

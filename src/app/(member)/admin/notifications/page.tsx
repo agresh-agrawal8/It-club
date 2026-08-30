@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Bell, AlertTriangle } from "lucide-react";
-import { requireAdmin } from "@/lib/auth";
+import { requireCoreTeam } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ interface Row {
 }
 
 export default async function AdminNotificationsPage() {
-  await requireAdmin();
+  await requireCoreTeam();
 
   let recent: Row[] = [];
   let memberCount = 0;
@@ -61,8 +61,8 @@ export default async function AdminNotificationsPage() {
         backHref="/admin"
       />
 
-      <Card deep className="p-6 md:p-8">
-        <h2 className="mb-5 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+      <Card surface deep className="p-6 md:p-8">
+        <h2 className="mb-5 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ink-3">
           <Bell className="h-4 w-4" /> Send a notification
         </h2>
         <AdminCreateForm
@@ -110,14 +110,14 @@ export default async function AdminNotificationsPage() {
       </Card>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+        <h2 className="headline-wide text-sm text-white">
           Sent recently
         </h2>
         {grouped.length === 0 && (
-          <p className="text-sm text-zinc-500">Nothing sent yet — your first broadcast goes above.</p>
+          <p className="text-sm text-ink-4">Nothing sent yet — your first broadcast goes above.</p>
         )}
         {grouped.map((n) => (
-          <Card key={n.id} className="flex items-center justify-between gap-4 p-5">
+          <Card surface key={n.id} className="flex items-center justify-between gap-4 p-5">
             <div className="flex min-w-0 items-center gap-4">
               <span
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
@@ -132,7 +132,7 @@ export default async function AdminNotificationsPage() {
                   {n.urgent && <Badge variant="danger">Urgent</Badge>}
                   <Badge variant="small">{n.type}</Badge>
                 </div>
-                <p className="mt-0.5 truncate text-xs text-zinc-500">
+                <p className="mt-0.5 truncate text-xs text-ink-4">
                   {n.count} recipient{n.count > 1 ? "s" : ""} · {timeAgo(n.created_at)}
                   {n.body ? ` · ${n.body}` : ""}
                 </p>

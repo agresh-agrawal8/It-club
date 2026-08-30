@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { CheckCircle2, Undo2, Inbox, FileText, Link2 } from "lucide-react";
-import { requireAdmin } from "@/lib/auth";
+import { requireCoreTeam } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,7 +20,7 @@ const categoryLabel: Record<Submission["category"], string> = {
 };
 
 export default async function AdminSubmissionsPage() {
-  await requireAdmin();
+  await requireCoreTeam();
 
   let submissions: Submission[] = [];
   try {
@@ -53,23 +53,23 @@ export default async function AdminSubmissionsPage() {
       ) : (
         <div className="flex flex-col gap-4">
           {submissions.map((s) => (
-            <Card key={s.id} className={`p-6 ${s.handled ? "opacity-60" : ""}`}>
+            <Card surface key={s.id} className={`p-6 ${s.handled ? "opacity-60" : ""}`}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="text-sm font-semibold text-white">{s.title}</h3>
                     <Badge variant="accent">{categoryLabel[s.category]}</Badge>
                     {s.handled && <Badge variant="success">Handled</Badge>}
-                    <span className="text-[11px] text-zinc-600">{timeAgo(s.created_at)}</span>
+                    <span className="text-[11px] text-ink-4">{timeAgo(s.created_at)}</span>
                   </div>
-                  <p className="mt-1.5 text-xs text-zinc-500">
+                  <p className="mt-1.5 text-xs text-ink-4">
                     {s.name} ·{" "}
                     <a href={`mailto:${s.email}`} className="text-brand-300 hover:text-brand-200">
                       {s.email}
                     </a>
                   </p>
                   {s.message && (
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-zinc-400">
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink-3">
                       {s.message}
                     </p>
                   )}
@@ -79,7 +79,7 @@ export default async function AdminSubmissionsPage() {
                         href={s.file_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-brand-400/40 hover:text-brand-300"
+                        className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-ink-2 transition-colors hover:border-brand-400/40 hover:text-brand-300"
                       >
                         <FileText className="h-3.5 w-3.5" /> Open document
                       </a>
@@ -89,7 +89,7 @@ export default async function AdminSubmissionsPage() {
                         href={s.link_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-brand-400/40 hover:text-brand-300"
+                        className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-ink-2 transition-colors hover:border-brand-400/40 hover:text-brand-300"
                       >
                         <Link2 className="h-3.5 w-3.5" /> Open link
                       </a>
@@ -103,7 +103,7 @@ export default async function AdminSubmissionsPage() {
                     <input type="hidden" name="handled" value={String(s.handled)} />
                     <button
                       type="submit"
-                      className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-emerald-400/40 hover:text-emerald-300"
+                      className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-ink-2 transition-colors hover:border-emerald-400/40 hover:text-emerald-300"
                     >
                       {s.handled ? (
                         <>

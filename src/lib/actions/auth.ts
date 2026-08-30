@@ -4,64 +4,75 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { memberIdToEmail } from "@/lib/member-id";
+import { authEmailForName, isUsableName } from "@/lib/identity";
+import { requireUserAllowingPasswordChange } from "@/lib/auth";
 import { homeForRole } from "@/lib/utils";
-
-const loginSchema = z.object({
-  memberId: z.string().min(1, "Member ID or email is required"),
-  password: z.string().min(1, "Password is required"),
-});
 
 export type AuthState = { error?: string } | undefined;
 
+const loginSchema = z.object({
+  name: z.string().trim().min(1, "Enter your name"),
+  password: z.string().min(1, "Enter your password"),
+});
+
 /**
- * Member login. Accounts are provisioned by admins with a Member ID that is
- * mapped to an internal email (memberid@members.local) at creation time, so
- * members sign in with their Member ID + password.
+ * Sign in with name + password.
+ *
+ * The failure message is deliberately identical for "no such member", "wrong
+ * password" and "unusable name". Distinguishing them would turn the form into
+ * a membership oracle that tells an anonymous visitor who is in the club.
  */
+const GENERIC_FAILURE = "That name and password don't match an account.";
+
 export async function loginAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
   const parsed = loginSchema.safeParse({
-    memberId: formData.get("memberId"),
+    name: formData.get("name"),
     password: formData.get("password"),
   });
   if (!parsed.success) {
     return { error: parsed.error.errors[0]?.message ?? "Invalid input" };
   }
 
+  const { name, password } = parsed.data;
+  if (!isUsableName(name)) return { error: GENERIC_FAILURE };
+
   const supabase = await createClient();
-  // Core team members may sign in with their real email; regular members use
-  // their Member ID (mapped to a synthetic auth email).
-  const raw = parsed.data.memberId.trim();
-  const email = raw.includes("@") ? raw.toLowerCase() : memberIdToEmail(raw);
-
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password: parsed.data.password,
+    email: authEmailForName(name),
+    password,
   });
+  if (error || !data.user) return { error: GENERIC_FAILURE };
 
-  if (error) {
-    return { error: "Invalid Member ID / email or password." };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, is_active, must_change_password")
+    .eq("id", data.user.id)
+    .single();
+
+  // A deactivated account must not hold a live session.
+  if (profile && profile.is_active === false) {
+    await supabase.auth.signOut();
+    return { error: GENERIC_FAILURE };
   }
 
-  // Land each role in its own home: core team → Core Team Panel,
-  // teachers → supervisor panel, members → dashboard. ?redirect wins.
-  let home = "/dashboard";
-  if (data.user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .single();
-    home = homeForRole(profile?.role);
+  let destination = profile?.must_change_password
+    ? "/account/password?forced=1"
+    : homeForRole(profile?.role);
+
+  // Honour ?redirect=, but only for local paths — an absolute URL here would
+  // be an open redirect straight off the back of a successful sign-in.
+  if (!profile?.must_change_password) {
+    const requested = String(formData.get("redirect") ?? "");
+    if (requested.startsWith("/") && !requested.startsWith("//")) {
+      destination = requested;
+    }
   }
 
-  const explicit = (formData.get("redirect") as string) || "";
-  const redirectTo = explicit && explicit !== "/dashboard" ? explicit : home;
   revalidatePath("/", "layout");
-  redirect(redirectTo);
+  redirect(destination);
 }
 
 export async function signOutAction() {
@@ -69,4 +80,69 @@ export async function signOutAction() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+/* ── Changing your own password ─────────────────────────────────────────── */
+
+const changeSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password"),
+    newPassword: z
+      .string()
+      .min(8, "New password must be at least 8 characters")
+      .max(128, "That password is too long"),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: "The two new passwords don't match",
+    path: ["confirmPassword"],
+  })
+  .refine((d) => d.newPassword !== d.currentPassword, {
+    message: "Choose a password you haven't used here before",
+    path: ["newPassword"],
+  });
+
+export type PasswordState = { error?: string; success?: boolean } | undefined;
+
+/**
+ * Change your own password.
+ *
+ * The current password is re-verified first. Without that, anyone who found an
+ * unattended signed-in browser could take the account over permanently, and a
+ * stolen session cookie would become a stolen account.
+ */
+export async function changePasswordAction(
+  _prev: PasswordState,
+  formData: FormData,
+): Promise<PasswordState> {
+  const { user, profile } = await requireUserAllowingPasswordChange();
+
+  const parsed = changeSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0]?.message ?? "Check the form and try again." };
+  }
+
+  const supabase = await createClient();
+
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email: authEmailForName(profile.full_name),
+    password: parsed.data.currentPassword,
+  });
+  if (reauthError) return { error: "Your current password isn't right." };
+
+  // Supabase hashes with bcrypt on the way in; only the hash is ever stored.
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.newPassword });
+  if (error) return { error: "Could not update the password. Try again." };
+
+  await supabase
+    .from("profiles")
+    .update({ must_change_password: false })
+    .eq("id", user.id);
+
+  revalidatePath("/", "layout");
+  return { success: true };
 }

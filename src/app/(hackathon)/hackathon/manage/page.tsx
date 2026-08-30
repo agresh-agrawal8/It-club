@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { CardBody, Eyebrow, HackCard, IconTile, SectionHead } from "@/components/hackathon/card";
-import { requireAdmin } from "@/lib/auth";
+import { requireCoreTeam } from "@/lib/auth";
 import { EVENT } from "@/lib/hackathon/content";
 import { BRIEFS } from "@/lib/hackathon/briefs";
 import {
@@ -19,7 +19,7 @@ import { TeamAdminCard } from "./team-admin";
 export const metadata: Metadata = { title: "Manage teams" };
 
 export default async function ManagePage() {
-  await requireAdmin();
+  await requireCoreTeam();
 
   const [teams, members, results, submissions] = await Promise.all([
     getTeams(),

@@ -3,43 +3,59 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/container";
-import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/layout/logo";
+import { SITE } from "@/lib/site";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
-  title: "Member login",
-  description: "Sign in to the EHIS IT Club member area.",
+  title: "Sign in",
+  description: `Sign in to the ${SITE.name} member area.`,
+  // The sign-in page has nothing to offer a search result, and indexing it
+  // just puts a login form in front of people looking for the club.
+  robots: { index: false, follow: true },
 };
 
 export default function LoginPage() {
   return (
     <div className="relative flex min-h-screen items-center">
-      <div className="glow-violet pointer-events-none absolute inset-0 -z-10" />
+      <div className="glow-club pointer-events-none absolute inset-0 -z-10" aria-hidden />
+      <div
+        className="dot-grid beam-mask pointer-events-none absolute inset-0 -z-10 opacity-[0.12]"
+        aria-hidden
+      />
+
       <Container className="flex justify-center py-16">
-        <div className="w-full max-w-md">
-          <Link href="/" className="mb-8 flex w-fit items-center gap-2 text-sm text-zinc-400 hover:text-white">
-            <ArrowLeft className="h-4 w-4" /> Back to site
+        <main id="main" className="w-full max-w-md">
+          <Link
+            href="/"
+            className="mb-10 inline-flex w-fit items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-3 transition-colors hover:text-white"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> Back to site
           </Link>
 
-          <div className="mb-8 flex flex-col items-center gap-4 text-center">
-            <Logo />
-            <h1 className="mt-2 text-3xl font-semibold tracking-tighter text-white">Member sign in</h1>
-            <p className="text-sm text-zinc-400">
-              Use the Member ID (or email) and password provided by your core team.
-            </p>
+          <div className="mb-8 flex flex-col items-center gap-5 text-center">
+            <Logo size={64} showWordmark={false} href={null} />
+            <div className="flex flex-col gap-2">
+              <h1 className="headline text-3xl text-white">Member sign in</h1>
+              <p className="text-sm leading-relaxed text-ink-3">
+                Sign in with your name and the password the core team gave you.
+              </p>
+            </div>
           </div>
 
-          <Card deep>
-            <Suspense fallback={<div className="h-64" />}>
+          <div className="glass-deep hairline-gradient rounded-3xl p-8">
+            {/* useSearchParams needs a Suspense boundary to keep this route
+                statically renderable rather than forcing it dynamic. */}
+            <Suspense fallback={<div className="h-64" aria-hidden />}>
               <LoginForm />
             </Suspense>
-          </Card>
+          </div>
 
-          <p className="mt-6 text-center text-xs text-zinc-500">
-            Don't have an account? Member accounts are created by the core team.
+          <p className="mt-6 text-center text-xs leading-relaxed text-ink-4">
+            Accounts are created by the core team. Forgotten your password? Ask them to reset it —
+            they can issue a new one, but nobody can look up your old one.
           </p>
-        </div>
+        </main>
       </Container>
     </div>
   );

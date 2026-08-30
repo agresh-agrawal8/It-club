@@ -1,67 +1,47 @@
-"use client";
-
-import { useState } from "react";
 import Image from "next/image";
-import { X } from "lucide-react";
 import type { GalleryItem } from "@/types/database";
 
+/**
+ * The public gallery.
+ *
+ * Semantics first: a list of <figure> elements, each with its own
+ * <figcaption>, inside a <ul>. That is what tells a screen reader "this is a
+ * collection of N images" rather than "here are some divs".
+ *
+ * Every image renders with its intrinsic width and height, which are recorded
+ * at upload time. next/image turns those into an aspect-ratio box, so the
+ * grid reserves each tile's space before the bytes arrive and the page does
+ * not reflow as photographs stream in.
+ */
 export function GalleryGrid({ items }: { items: GalleryItem[] }) {
-  const [active, setActive] = useState<GalleryItem | null>(null);
-
   return (
-    <>
-      <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 [&>*]:mb-4">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActive(item)}
-            className="group relative block w-full overflow-hidden rounded-2xl border border-white/10 bg-zinc-900"
-          >
+    <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+      {items.map((item, index) => (
+        <li key={item.id}>
+          <figure className="hairline-gradient group relative overflow-hidden rounded-2xl">
             <Image
               src={item.image_url}
-              alt={item.title ?? "Gallery image"}
-              width={600}
-              height={400}
-              className="h-auto w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              // Falls back through title, then to empty — an empty alt marks
+              // the image as decorative, which is correct and far better than
+              // a screen reader announcing a filename.
+              alt={item.alt_text ?? item.title ?? ""}
+              width={item.width ?? 1200}
+              height={item.height ?? 900}
+              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              // The first row is likely above the fold on most viewports;
+              // everything after it waits until it is needed.
+              loading={index < 4 ? "eager" : "lazy"}
+              priority={index === 0}
+              className="aspect-[4/3] w-full object-cover transition-transform duration-[var(--duration-slow)] ease-[var(--ease-out-soft)] group-hover:scale-[1.04]"
             />
-            {(item.title || item.caption) && (
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 text-left opacity-0 transition-opacity group-hover:opacity-100">
-                {item.title && <div className="text-sm font-medium text-white">{item.title}</div>}
-                {item.caption && <div className="text-xs text-zinc-300">{item.caption}</div>}
-              </div>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {active && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
-          onClick={() => setActive(null)}
-        >
-          <button
-            className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-            onClick={() => setActive(null)}
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <figure className="max-h-[90vh] max-w-5xl" onClick={(e) => e.stopPropagation()}>
-            <Image
-              src={active.image_url}
-              alt={active.title ?? "Gallery image"}
-              width={1600}
-              height={1000}
-              className="max-h-[80vh] w-auto rounded-2xl object-contain"
-            />
-            {(active.title || active.caption) && (
-              <figcaption className="mt-3 text-center text-sm text-zinc-300">
-                {active.title} {active.caption && `— ${active.caption}`}
+            {item.title && (
+              <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-4 pt-12 text-xs font-medium text-white">
+                {item.title}
               </figcaption>
             )}
           </figure>
-        </div>
-      )}
-    </>
+        </li>
+      ))}
+    </ul>
   );
 }

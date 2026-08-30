@@ -20,7 +20,7 @@ import { findTeamByName, getTeamPortal, type Team } from "./data";
  *     team id by hand.
  *   • Unpublished results never leave the server, so nothing can be read
  *     before the organisers publish it.
- *   • Every write path still requires a club admin session (requireAdmin).
+ *   • Every write path still requires a club admin session (requireCoreTeam).
  */
 
 export const TEAM_COOKIE = "infinium_team";

@@ -2,37 +2,32 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { UserRole } from "@/types/database";
 
-/** True for roles with full admin access (core team). */
-export function isAdminRole(role: UserRole | string | null | undefined) {
-  return role === "admin" || role === "super_admin";
-}
-
-/** Teachers get read-only oversight — never write access. */
-export function isTeacherRole(role: UserRole | string | null | undefined) {
-  return role === "teacher";
-}
-
-/** Staff = anyone with oversight of the club (teachers + core team). */
-export function isStaffRole(role: UserRole | string | null | undefined) {
-  return isAdminRole(role) || isTeacherRole(role);
+/**
+ * The club has exactly two roles. `core_team` runs the club and manages
+ * content; `member` takes part. There is no tier above core team, so there is
+ * no predicate for one.
+ */
+export function isCoreTeam(role: UserRole | string | null | undefined) {
+  return role === "core_team";
 }
 
 /** Human label for a role. */
 export function roleLabel(role: UserRole | string | null | undefined) {
-  if (role === "super_admin") return "Master Admin";
-  if (role === "admin") return "Core Team";
-  if (role === "teacher") return "Teacher";
-  return "Member";
+  return isCoreTeam(role) ? "Core Team" : "Member";
 }
 
-/** Where each role lands after signing in. */
+/**
+ * Where each role lands after signing in.
+ *
+ * `/admin` is a URL prefix, not a role — the panel it serves is the Core Team
+ * interface and is labelled as such throughout. The brief removed the two
+ * routes under it that are obsolete (applications, messages), not the prefix.
+ */
 export function homeForRole(role: UserRole | string | null | undefined) {
-  if (isAdminRole(role)) return "/admin";
-  if (isTeacherRole(role)) return "/teacher";
-  return "/dashboard";
+  return isCoreTeam(role) ? "/admin" : "/dashboard";
 }
 
-/** Tailwind-aware className combiner (from the Agresh design system). */
+/** Tailwind-aware className combiner. */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

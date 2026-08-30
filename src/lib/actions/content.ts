@@ -3,35 +3,51 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireCoreTeam } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { sendPushToProfiles } from "@/lib/push";
 
 /**
- * Core Team Panel actions. All of these run as the signed-in admin through
- * the regular client — RLS policies (is_admin()) are the enforcement layer,
- * so no service key is required for content management.
+ * Core Team content actions.
+ *
+ * These run as the signed-in core-team account through the ordinary client, so
+ * the RLS policies (`is_admin()`) are the enforcement layer and no service-role
+ * key is ever needed on the server. The requireCoreTeam() call in front of each
+ * one fails fast with a redirect; RLS is what makes that safe rather than
+ * merely tidy.
  */
 
 function fail(message: string) {
   return { error: message };
 }
 
-/* ── Events ────────────────────────────────────────────────── */
+const uuid = z.string().uuid();
 
+/* ── Events ─────────────────────────────────────────────────────────────── */
+
+/**
+ * One schema for everything the club runs. A competition is an event with
+ * `kind = "competition"`, an organiser and (afterwards) a result — not a
+ * second table with a second form behind it.
+ */
 const eventSchema = z.object({
-  title: z.string().min(3, "Title needs at least 3 characters"),
+  title: z.string().trim().min(3, "Title needs at least 3 characters"),
   description: z.string().optional(),
-  starts_at: z.string().min(1, "Start date/time is required"),
+  starts_at: z.string().min(1, "Start date and time are required"),
   ends_at: z.string().optional(),
   venue: z.string().optional(),
-  registration_url: z.string().url().optional().or(z.literal("")),
-  banner_url: z.string().url().optional().or(z.literal("")),
+  kind: z
+    .enum(["workshop", "competition", "hackathon", "talk", "other"])
+    .default("workshop"),
+  organizer: z.string().optional(),
+  result: z.string().optional(),
+  registration_url: z.string().url("Enter a valid URL").optional().or(z.literal("")),
+  banner_url: z.string().url("Enter a valid URL").optional().or(z.literal("")),
   status: z.enum(["upcoming", "ongoing", "past", "cancelled"]).default("upcoming"),
 });
 
 export async function createEventAction(formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const parsed = eventSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail(parsed.error.errors[0]?.message ?? "Invalid event");
 
@@ -44,59 +60,8 @@ export async function createEventAction(formData: FormData) {
     starts_at: new Date(d.starts_at).toISOString(),
     ends_at: d.ends_at ? new Date(d.ends_at).toISOString() : null,
     venue: d.venue || null,
-    registration_url: d.registration_url || null,
-    banner_url: d.banner_url || null,
-    status: d.status,
-  });
-  if (error) return fail(error.message);
-
-  revalidatePath("/admin/events");
-  revalidatePath("/events");
-  revalidatePath("/");
-  return { success: true };
-}
-
-export async function deleteEventAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
-  if (!id) return;
-  const supabase = await createClient();
-  const { error } = await supabase.from("events").delete().eq("id", id);
-  if (error) return;
-  revalidatePath("/admin/events");
-  revalidatePath("/events");
-  revalidatePath("/");
-  return;
-}
-
-/* ── Competitions ──────────────────────────────────────────── */
-
-const competitionSchema = z.object({
-  title: z.string().min(3, "Title needs at least 3 characters"),
-  description: z.string().optional(),
-  organizer: z.string().optional(),
-  location: z.string().optional(),
-  starts_at: z.string().optional(),
-  result: z.string().optional(),
-  registration_url: z.string().url().optional().or(z.literal("")),
-  banner_url: z.string().url().optional().or(z.literal("")),
-  status: z.enum(["upcoming", "ongoing", "past", "cancelled"]).default("upcoming"),
-});
-
-export async function createCompetitionAction(formData: FormData) {
-  await requireAdmin();
-  const parsed = competitionSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return fail(parsed.error.errors[0]?.message ?? "Invalid competition");
-
-  const d = parsed.data;
-  const supabase = await createClient();
-  const { error } = await supabase.from("competitions").insert({
-    slug: `${slugify(d.title)}-${Date.now().toString(36)}`,
-    title: d.title,
-    description: d.description || null,
+    kind: d.kind,
     organizer: d.organizer || null,
-    location: d.location || null,
-    starts_at: d.starts_at ? new Date(d.starts_at).toISOString() : null,
     result: d.result || null,
     registration_url: d.registration_url || null,
     banner_url: d.banner_url || null,
@@ -104,35 +69,37 @@ export async function createCompetitionAction(formData: FormData) {
   });
   if (error) return fail(error.message);
 
-  revalidatePath("/admin/competitions");
-  revalidatePath("/competitions");
+  revalidatePath("/admin/events");
+  revalidatePath("/events");
+  revalidatePath("/");
+  revalidatePath("/sitemap.xml");
   return { success: true };
 }
 
-export async function deleteCompetitionAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
-  if (!id) return;
+export async function deleteEventAction(formData: FormData) {
+  await requireCoreTeam();
+  const id = String(formData.get("id") ?? "");
+  if (!uuid.safeParse(id).success) return;
+
   const supabase = await createClient();
-  const { error } = await supabase.from("competitions").delete().eq("id", id);
-  if (error) return;
-  revalidatePath("/admin/competitions");
-  revalidatePath("/competitions");
-  return;
+  await supabase.from("events").delete().eq("id", id);
+  revalidatePath("/admin/events");
+  revalidatePath("/events");
+  revalidatePath("/");
 }
 
-/* ── Achievements ──────────────────────────────────────────── */
+/* ── Achievements ───────────────────────────────────────────────────────── */
 
 const achievementSchema = z.object({
-  title: z.string().min(3, "Title needs at least 3 characters"),
+  title: z.string().trim().min(3, "Title needs at least 3 characters"),
   description: z.string().optional(),
   category: z.string().optional(),
   awarded_on: z.string().optional(),
-  image_url: z.string().url().optional().or(z.literal("")),
+  image_url: z.string().url("Enter a valid URL").optional().or(z.literal("")),
 });
 
 export async function createAchievementAction(formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const parsed = achievementSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail(parsed.error.errors[0]?.message ?? "Invalid achievement");
 
@@ -154,222 +121,95 @@ export async function createAchievementAction(formData: FormData) {
 }
 
 export async function deleteAchievementAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
-  if (!id) return;
+  await requireCoreTeam();
+  const id = String(formData.get("id") ?? "");
+  if (!uuid.safeParse(id).success) return;
+
   const supabase = await createClient();
-  const { error } = await supabase.from("achievements").delete().eq("id", id);
-  if (error) return;
+  await supabase.from("achievements").delete().eq("id", id);
   revalidatePath("/admin/achievements");
   revalidatePath("/achievements");
   revalidatePath("/");
-  return;
 }
 
-/* ── Gallery ───────────────────────────────────────────────── */
-
-const gallerySchema = z.object({
-  image_url: z.string().url("A valid image URL is required"),
-  title: z.string().optional(),
-  caption: z.string().optional(),
-  album: z.string().optional(),
-});
-
-export async function addGalleryItemAction(formData: FormData) {
-  await requireAdmin();
-  const parsed = gallerySchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return fail(parsed.error.errors[0]?.message ?? "Invalid gallery item");
-
-  const d = parsed.data;
-  const supabase = await createClient();
-  const { error } = await supabase.from("gallery_items").insert({
-    image_url: d.image_url,
-    title: d.title || null,
-    caption: d.caption || null,
-    album: d.album || null,
-  });
-  if (error) return fail(error.message);
-
-  revalidatePath("/admin/gallery");
-  revalidatePath("/gallery");
-  return { success: true };
-}
-
-export async function deleteGalleryItemAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
-  if (!id) return;
-  const supabase = await createClient();
-  const { error } = await supabase.from("gallery_items").delete().eq("id", id);
-  if (error) return;
-  revalidatePath("/admin/gallery");
-  revalidatePath("/gallery");
-  return;
-}
-
-/* ── Contact messages ──────────────────────────────────────── */
-
-export async function toggleMessageHandledAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
-  const handled = formData.get("handled") === "true";
-  if (!id) return;
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("contact_messages")
-    .update({ handled: !handled })
-    .eq("id", id);
-  if (error) return;
-  revalidatePath("/admin/messages");
-  return;
-}
-
-export async function deleteMessageAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
-  if (!id) return;
-  const supabase = await createClient();
-  const { error } = await supabase.from("contact_messages").delete().eq("id", id);
-  if (error) return;
-  revalidatePath("/admin/messages");
-  return;
-}
-
-/* ── Member management (role / active) ─────────────────────── */
-
-export async function setMemberRoleAction(formData: FormData) {
-  const { user } = await requireAdmin();
-  const id = formData.get("id") as string;
-  const role = formData.get("role") as string;
-  if (!id || !["member", "admin"].includes(role)) return;
-  // Nobody can change a super_admin from the UI, and you can't demote yourself.
-  if (id === user.id) return;
-
-  const supabase = await createClient();
-  const { data: target } = await supabase.from("profiles").select("role").eq("id", id).single();
-  if (target?.role === "super_admin") return;
-
-  const { error } = await supabase.from("profiles").update({ role }).eq("id", id);
-  if (error) return;
-  revalidatePath("/admin/members");
-  return;
-}
-
-export async function toggleMemberActiveAction(formData: FormData) {
-  const { user } = await requireAdmin();
-  const id = formData.get("id") as string;
-  const isActive = formData.get("is_active") === "true";
-  if (!id) return;
-  if (id === user.id) return;
-
-  const supabase = await createClient();
-  const { data: target } = await supabase.from("profiles").select("role").eq("id", id).single();
-  if (target?.role === "super_admin") return;
-
-  const { error } = await supabase.from("profiles").update({ is_active: !isActive }).eq("id", id);
-  if (error) return;
-  revalidatePath("/admin/members");
-  revalidatePath("/team");
-  return;
-}
-
-/* ── Submissions (documents for competitions / drives / content) ── */
+/* ── Submissions inbox ──────────────────────────────────────────────────── */
 
 export async function toggleSubmissionHandledAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
+  await requireCoreTeam();
+  const id = String(formData.get("id") ?? "");
   const handled = formData.get("handled") === "true";
-  if (!id) return;
+  if (!uuid.safeParse(id).success) return;
+
   const supabase = await createClient();
   await supabase.from("submissions").update({ handled: !handled }).eq("id", id);
   revalidatePath("/admin/submissions");
-  return;
 }
 
 export async function deleteSubmissionAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
-  if (!id) return;
+  await requireCoreTeam();
+  const id = String(formData.get("id") ?? "");
+  if (!uuid.safeParse(id).success) return;
+
   const supabase = await createClient();
   await supabase.from("submissions").delete().eq("id", id);
   revalidatePath("/admin/submissions");
-  return;
 }
 
-/* ── Join requests (membership applications) ───────────────── */
-
-export async function setJoinStatusAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
-  const status = formData.get("status") as string;
-  if (!id || !["pending", "approved", "rejected"].includes(status)) return;
-  const supabase = await createClient();
-  await supabase.from("join_requests").update({ status }).eq("id", id);
-  revalidatePath("/admin/applications");
-  return;
-}
-
-export async function deleteJoinRequestAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
-  if (!id) return;
-  const supabase = await createClient();
-  await supabase.from("join_requests").delete().eq("id", id);
-  revalidatePath("/admin/applications");
-  return;
-}
-
-/* ── Notifications (core team → members) ───────────────────── */
+/* ── Notifications ──────────────────────────────────────────────────────── */
 
 const notifySchema = z.object({
-  title: z.string().min(3, "Give the notification a title"),
+  title: z.string().trim().min(3, "Give the notification a title"),
   body: z.string().optional(),
   link: z.string().optional(),
-  type: z.enum(["info", "task", "event", "project", "achievement", "system"]).default("info"),
-  audience: z.enum(["all", "members", "admins"]).default("all"),
+  type: z.enum(["info", "task", "event", "achievement", "system"]).default("info"),
+  audience: z.enum(["all", "members", "core_team"]).default("all"),
   urgent: z.string().optional(),
 });
 
 /**
- * Broadcast a notification to members. Urgent notices pop up the next time
- * the recipient opens their dashboard.
+ * Broadcast to members. Urgent notices pop up the next time the recipient
+ * opens their dashboard, and are pushed to any registered device.
  */
 export async function sendNotificationAction(formData: FormData) {
-  await requireAdmin();
+  await requireCoreTeam();
   const parsed = notifySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fail(parsed.error.errors[0]?.message ?? "Invalid notification");
+
   const d = parsed.data;
   const urgent = d.urgent === "on" || d.urgent === "true";
 
+  // Only relative links — an outbound absolute URL in a broadcast notification
+  // is a phishing primitive aimed at the whole club.
+  const link = d.link && d.link.startsWith("/") && !d.link.startsWith("//") ? d.link : null;
+
   const supabase = await createClient();
-  let query = supabase.from("profiles").select("id,role").eq("is_active", true);
+  let query = supabase.from("profiles").select("id").eq("is_active", true);
   if (d.audience === "members") query = query.eq("role", "member");
-  if (d.audience === "admins") query = query.in("role", ["admin", "super_admin"]);
+  if (d.audience === "core_team") query = query.eq("role", "core_team");
 
   const { data: recipients, error: recErr } = await query;
   if (recErr) return fail(recErr.message);
-  if (!recipients?.length) return fail("No recipients match that audience.");
+  if (!recipients?.length) return fail("No one matches that audience.");
 
   const rows = recipients.map((r: { id: string }) => ({
     recipient_id: r.id,
     type: d.type,
     title: d.title,
     body: d.body || null,
-    link: d.link || null,
+    link,
     urgent,
   }));
 
   const { error } = await supabase.from("notifications").insert(rows);
   if (error) return fail(error.message);
 
-  // Fan out to registered devices. Best-effort: a push failure must not
-  // fail the broadcast that already saved successfully.
+  // Best effort: a push failure must not fail a broadcast already saved.
   const push = await sendPushToProfiles(
     recipients.map((r: { id: string }) => r.id),
     {
       title: urgent ? `Urgent: ${d.title}` : d.title,
       body: d.body || "Open Avinya for details.",
-      url: d.link || "/notifications",
+      url: link || "/notifications",
       urgent,
       tag: `avinya-${Date.now()}`,
     },
@@ -378,30 +218,21 @@ export async function sendNotificationAction(formData: FormData) {
   revalidatePath("/admin/notifications");
   revalidatePath("/notifications");
   revalidatePath("/dashboard");
-  return {
-    success: true,
-    pushed: push.sent,
-    recipients: rows.length,
-  };
+  return { success: true, pushed: push.sent, recipients: rows.length };
 }
 
 export async function deleteNotificationAction(formData: FormData) {
-  await requireAdmin();
-  const id = formData.get("id") as string;
-  if (!id) return;
+  await requireCoreTeam();
+  const id = String(formData.get("id") ?? "");
+  if (!uuid.safeParse(id).success) return;
+
   const supabase = await createClient();
   await supabase.from("notifications").delete().eq("id", id);
   revalidatePath("/admin/notifications");
-  return;
 }
 
-/** Member: dismiss an urgent popup by marking the notification read. */
-export async function markNotificationReadAction(formData: FormData) {
-  const id = formData.get("id") as string;
-  if (!id) return;
-  const supabase = await createClient();
-  await supabase.from("notifications").update({ read: true }).eq("id", id);
-  revalidatePath("/dashboard");
-  revalidatePath("/notifications");
-  return;
-}
+// Marking a notification read belongs to the member who received it, and
+// lives in actions/member.ts where it is scoped by recipient_id. It is not
+// duplicated here: the copy that used to sit in this file filtered on the
+// notification id alone, which let any signed-in account clear someone
+// else's urgent notice by guessing an id.

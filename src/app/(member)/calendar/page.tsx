@@ -76,7 +76,7 @@ export default async function CalendarPage() {
               <div className="flex flex-col gap-3">
                 {entries.map((it) => (
                   <Link key={`${it.kind}-${it.id}`} href={it.href}>
-                    <Card className="flex items-center gap-4 p-4 transition-colors hover:border-brand-400/40">
+                    <Card surface className="flex items-center gap-4 p-4 transition-colors hover:border-brand-400/40">
                       <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-brand-500/15 text-brand-300">
                         <span className="text-lg font-semibold leading-none">
                           {new Date(it.date).getDate()}

@@ -6,6 +6,7 @@ import { getEvent, resolveTheme } from "@/lib/events/engine";
 import { readEventSession } from "@/lib/events/session";
 import { EventLoginForm } from "@/components/events/login-form";
 import { EventMark } from "@/components/events/shell/event-mark";
+import { eventBasePath } from "@/lib/events/paths";
 
 export const metadata = { title: "Team sign in" };
 
@@ -20,10 +21,10 @@ export default async function EventLoginPage({
 
   // Already signed in — go straight through.
   const existing = await readEventSession(event.slug).catch(() => null);
-  if (existing) redirect(`/events/hub/${event.slug}/dashboard`);
+  if (existing) redirect(`${eventBasePath(event.slug)}/dashboard`);
 
   const theme = resolveTheme(event);
-  const base = `/events/hub/${event.slug}`;
+  const base = eventBasePath(event.slug);
 
   return (
     <Container className="flex min-h-[70vh] items-center justify-center py-14">

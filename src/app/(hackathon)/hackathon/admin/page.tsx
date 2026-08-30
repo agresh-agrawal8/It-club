@@ -11,7 +11,7 @@ import {
   IconTile,
   SectionHead,
 } from "@/components/hackathon/card";
-import { requireAdmin } from "@/lib/auth";
+import { requireCoreTeam } from "@/lib/auth";
 import { EVENT } from "@/lib/hackathon/content";
 import { getAdminStats, getAnnouncements, getConfig } from "@/lib/hackathon/data";
 import {
@@ -23,7 +23,7 @@ import {
 export const metadata: Metadata = { title: "Admin console" };
 
 export default async function AdminPage() {
-  await requireAdmin();
+  await requireCoreTeam();
 
   const [stats, announcements, config] = await Promise.all([
     getAdminStats(),

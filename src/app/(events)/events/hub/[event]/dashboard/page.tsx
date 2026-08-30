@@ -28,6 +28,7 @@ import type { MissionProgress, MissionState } from "@/lib/events/types";
 import { eventLogoutAction } from "@/lib/events/actions/registration";
 import { EventMark } from "@/components/events/shell/event-mark";
 import { timeAgo } from "@/lib/utils";
+import { eventBasePath } from "@/lib/events/paths";
 
 export const metadata = { title: "Dashboard" };
 
@@ -50,7 +51,7 @@ export default async function EventDashboardPage({
   // Redirects to the event login when there is no verified session.
   const actor = await requireEventParticipant(event.id, event.slug);
   const settings = await getEventSettings(event.id);
-  const base = `/events/hub/${event.slug}`;
+  const base = eventBasePath(event.slug);
 
   const [overview, missions, deps, announcements, leaderboard] = await Promise.all([
     actor.participantId ? getTeamOverview(actor.participantId) : Promise.resolve(null),

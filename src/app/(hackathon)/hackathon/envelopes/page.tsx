@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { CardBody, Eyebrow, HackCard, IconTile, SectionHead } from "@/components/hackathon/card";
-import { requireAdmin } from "@/lib/auth";
+import { requireCoreTeam } from "@/lib/auth";
 import { BRIEFS } from "@/lib/hackathon/briefs";
 import { getTeams } from "@/lib/hackathon/data";
 import { EnvelopeBoard, type BoardEnvelope, type BoardTeam } from "./envelope-board";
@@ -18,11 +18,11 @@ export const metadata: Metadata = { title: "Envelope allocation" };
  * accordions meant never seeing the allocation as a whole.
  *
  * Brief titles are read here, in a Server Component — `briefs.ts` is
- * server-only, and this page is behind requireAdmin(), so the titles reach
+ * server-only, and this page is behind requireCoreTeam(), so the titles reach
  * organisers and nobody else.
  */
 export default async function EnvelopesPage() {
-  await requireAdmin();
+  await requireCoreTeam();
 
   const teams = await getTeams();
 
