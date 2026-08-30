@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { RemoteImage } from "@/components/ui/remote-image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Clock, MapPin, ExternalLink } from "lucide-react";
@@ -43,7 +43,7 @@ export default async function EventDetailPage({
     <article className="pb-24">
       <div className="relative h-[40vh] min-h-[300px] w-full overflow-hidden bg-zinc-950">
         {event.banner_url ? (
-          <Image src={event.banner_url} alt={event.title} fill priority className="object-cover" />
+          <RemoteImage src={event.banner_url} alt="" fill priority sizes="100vw" className="object-cover" />
         ) : (
           <div className="glow-violet h-full w-full" />
         )}

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import Image from "next/image";
 import { CalendarDays, MapPin, Clock, Trophy } from "lucide-react";
 import type { EventRow, EventKind } from "@/types/database";
 import { Badge } from "@/components/ui/badge";
+import { RemoteImage } from "@/components/ui/remote-image";
 import { formatDate, formatTime } from "@/lib/utils";
 
 const STATUS_VARIANT = {
@@ -32,10 +32,9 @@ export function EventCard({ event }: { event: EventRow }) {
       <article className="glass glass-hover hairline-gradient flex h-full flex-col overflow-hidden rounded-3xl">
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-black/40">
           {event.banner_url ? (
-            <Image
+            <RemoteImage
               src={event.banner_url}
               alt=""
-              aria-hidden
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               loading="lazy"

@@ -126,8 +126,20 @@ export function ImageUploadField({
               type="url"
               value={pasted}
               onChange={(e) => {
-                setPasted(e.target.value);
+                const next = e.target.value.trim();
+                setPasted(next);
                 setUrl("");
+                // A data: URI here means someone pasted an entire encoded
+                // image. It would be written into the database row verbatim —
+                // tens of kilobytes on every query that reads the table, with
+                // no caching and no optimisation. Uploading is what they meant.
+                if (next.startsWith("data:")) {
+                  setError("That's an encoded image, not a link. Use the upload button instead.");
+                } else if (next && !/^https:\/\//i.test(next)) {
+                  setError("Image links must start with https://");
+                } else {
+                  setError(null);
+                }
               }}
               disabled={!!url}
               placeholder="…or paste an image URL"

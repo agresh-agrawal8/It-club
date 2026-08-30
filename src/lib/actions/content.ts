@@ -42,7 +42,14 @@ const eventSchema = z.object({
   organizer: z.string().optional(),
   result: z.string().optional(),
   registration_url: z.string().url("Enter a valid URL").optional().or(z.literal("")),
-  banner_url: z.string().url("Enter a valid URL").optional().or(z.literal("")),
+  // https only. A `data:` URI would embed a whole encoded image in the row,
+  // and `javascript:`/`http:` have no business in an <img src> we render.
+  banner_url: z
+    .string()
+    .url("Enter a valid URL")
+    .refine((v) => /^https:\/\//i.test(v), "Image links must start with https://")
+    .optional()
+    .or(z.literal("")),
   status: z.enum(["upcoming", "ongoing", "past", "cancelled"]).default("upcoming"),
 });
 

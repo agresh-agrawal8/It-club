@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { RemoteImage } from "@/components/ui/remote-image";
 import { Award } from "lucide-react";
 import type { Achievement } from "@/types/database";
 import { Card } from "@/components/ui/card";
@@ -10,7 +10,7 @@ export function AchievementCard({ achievement }: { achievement: Achievement }) {
     <Card hoverLift className="flex h-full gap-4 p-6" glass>
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-brand-500/15">
         {achievement.image_url ? (
-          <Image src={achievement.image_url} alt={achievement.title} fill className="object-cover" />
+          <RemoteImage src={achievement.image_url} alt="" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-amber-300">
             <Award className="h-7 w-7" />

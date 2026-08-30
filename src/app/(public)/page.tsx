@@ -7,7 +7,6 @@ import {
   CalendarDays,
   Cpu,
   Code2,
-  MapPin,
   Palette,
   Rocket,
   Users,
@@ -16,9 +15,11 @@ import { Container } from "@/components/ui/container";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { MeshCard } from "@/components/ui/mesh-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { EventCard } from "@/components/features/event-card";
+import { RemoteImage } from "@/components/ui/remote-image";
 import { getUpcomingEvents, getGallery, getTeam } from "@/lib/data";
 import { SITE, absoluteUrl } from "@/lib/site";
-import { formatDate, isCoreTeam, initials } from "@/lib/utils";
+import { isCoreTeam, initials } from "@/lib/utils";
 
 export const metadata: Metadata = {
   // `absolute` opts out of the "%s · Avinya" template from the root layout,
@@ -317,53 +318,19 @@ export default async function HomePage() {
               description="The next session, workshop or hackathon will be announced here first. Subscribe below and you'll hear about it."
             />
           ) : (
-            <ol className="flex flex-col gap-4">
+            /*
+              The same EventCard the /events page uses, rather than a bespoke
+              text row. These events carry banner artwork, and the old row
+              layout showed none of it — a date chip and a title on a dark
+              panel reads as an empty placeholder even when the data is there.
+            */
+            <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {events.map((event) => (
                 <li key={event.id}>
-                  <Link
-                    href={`/events/${event.slug}`}
-                    className="glass glass-hover hairline-gradient group grid gap-5 rounded-3xl p-7 sm:grid-cols-[auto_1fr_auto] sm:items-center"
-                  >
-                    <div className="flex min-w-[4.5rem] flex-col items-center justify-center rounded-2xl bg-brand-500/10 px-4 py-3">
-                      <time
-                        dateTime={event.starts_at}
-                        className="headline text-2xl leading-none text-white"
-                      >
-                        {new Date(event.starts_at).toLocaleDateString("en-GB", { day: "2-digit" })}
-                      </time>
-                      <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-brand-300">
-                        {new Date(event.starts_at).toLocaleDateString("en-GB", { month: "short" })}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <h3 className="text-lg font-semibold tracking-tight text-white">
-                        {event.title}
-                      </h3>
-                      {event.description && (
-                        <p className="line-clamp-2 text-sm leading-relaxed text-ink-3">
-                          {event.description}
-                        </p>
-                      )}
-                      <div className="mt-1 flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-4">
-                        <span>{formatDate(event.starts_at)}</span>
-                        {event.venue && (
-                          <span className="flex items-center gap-1.5">
-                            <MapPin className="h-3 w-3" aria-hidden />
-                            {event.venue}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <ArrowUpRight
-                      className="hidden h-5 w-5 text-ink-4 transition-colors group-hover:text-white sm:block"
-                      aria-hidden
-                    />
-                  </Link>
+                  <EventCard event={event} />
                 </li>
               ))}
-            </ol>
+            </ul>
           )}
         </Container>
       </section>
@@ -453,14 +420,13 @@ export default async function HomePage() {
                 <li key={member.id}>
                   <article className="glass hairline-gradient flex h-full flex-col items-center gap-4 rounded-3xl p-7 text-center">
                     {member.avatar_url ? (
-                      <Image
+                      <RemoteImage
                         src={member.avatar_url}
                         alt=""
-                        aria-hidden
                         width={72}
                         height={72}
                         loading="lazy"
-                        className="h-18 w-18 rounded-full object-cover ring-1 ring-white/15"
+                        className="h-[72px] w-[72px] rounded-full object-cover ring-1 ring-white/15"
                       />
                     ) : (
                       <span
