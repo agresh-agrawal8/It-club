@@ -92,12 +92,40 @@ export function GalleryUploadForm() {
             Photo <span className="text-brand-300" aria-hidden>*</span>
           </span>
 
+          {/*
+            The file input is rendered unconditionally and never moves.
+
+            It used to live inside the "no preview yet" branch below, which
+            meant that selecting a photo set `preview`, React swapped to the
+            preview branch, and the input — along with the file the browser
+            had attached to it — was unmounted. The form then submitted with
+            no `image` field at all and the server correctly rejected it.
+
+            A file input holds the actual FileList; it is the payload, not a
+            decoration. It stays mounted for the life of the form, and only
+            the visuals around it swap.
+          */}
+          <input
+            ref={fileRef}
+            id="gallery-image"
+            type="file"
+            name="image"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="sr-only"
+            onChange={(e) => acceptFile(e.target.files?.[0])}
+          />
+
           {preview ? (
             <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/15">
               {/* Local object URL preview — next/image would need a loader for
                   a blob: source and buys nothing for a throwaway thumbnail. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={preview} alt="" aria-hidden className="h-full w-full object-cover" />
+              <label
+                htmlFor="gallery-image"
+                className="absolute inset-0 cursor-pointer"
+                aria-label="Choose a different photo"
+              />
               <button
                 type="button"
                 onClick={clear}
@@ -109,6 +137,7 @@ export function GalleryUploadForm() {
             </div>
           ) : (
             <label
+              htmlFor="gallery-image"
               onDragOver={(e) => {
                 e.preventDefault();
                 setDragging(true);
@@ -137,15 +166,6 @@ export function GalleryUploadForm() {
               <ImageUp className="h-7 w-7" aria-hidden />
               <span className="text-xs">Click, or drop a photo here</span>
               <span className="text-[10px] text-ink-4">PNG · JPEG · WebP · GIF, up to 8 MB</span>
-              <input
-                ref={fileRef}
-                type="file"
-                name="image"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                required
-                className="sr-only"
-                onChange={(e) => acceptFile(e.target.files?.[0])}
-              />
             </label>
           )}
 
